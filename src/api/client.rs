@@ -1,27 +1,23 @@
-use futures::executor;
-use std::error::Error; // 0.3.1
-
+use anyhow::Result;
 use async_trait::async_trait;
-use reqwest::{RequestBuilder, Url};
+use reqwest::Url;
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::endpoint::Endpoint;
 
+#[async_trait]
 pub trait Client {
-    fn query<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
+    async fn query<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
         &self,
         endpoint: &E,
-    ) -> Result<T, Box<dyn Error>>;
+    ) -> Result<T>;
 
-    fn query_raw<E: Endpoint + Sync + Serialize>(
-        &self,
-        endpoint: &E,
-    ) -> Result<String, Box<dyn Error>>;
+    async fn query_raw<E: Endpoint + Sync + Serialize>(&self, endpoint: &E) -> Result<String>;
 }
 
 pub struct TFLClient {
     base_url: Url,
-    reqwest_client: reqwest::blocking::Client,
+    reqwest_client: reqwest::Client,
     api_key: String,
 }
 
@@ -30,14 +26,15 @@ impl TFLClient {
         let url = Url::parse("https://api.tfl.gov.uk/")?;
         Ok(TFLClient {
             base_url: url,
-            reqwest_client: reqwest::blocking::Client::new(),
+            reqwest_client: reqwest::Client::new(),
             api_key: api_key.into(),
         })
     }
 }
 
+#[async_trait]
 impl Client for TFLClient {
-    fn query_raw<E>(&self, endpoint: &E) -> Result<String, Box<dyn Error>>
+    async fn query_raw<E>(&self, endpoint: &E) -> anyhow::Result<String>
     where
         E: Endpoint + Sync + Serialize,
     {
@@ -47,18 +44,17 @@ impl Client for TFLClient {
             .request(endpoint.method(), joined_url)
             .query(&[("app_key", &self.api_key)])
             .query(endpoint)
-            .send()?
-            //.await?
-            //.json::<T>()?;
-            .text()?;
-        //.await?;
+            .send()
+            .await?
+            .text()
+            .await?;
         Ok(response)
     }
 
-    fn query<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
+    async fn query<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
         &self,
         endpoint: &E,
-    ) -> Result<T, Box<dyn Error>>
+    ) -> Result<T>
     where
         E: Endpoint + Sync + Serialize,
     {
@@ -68,10 +64,10 @@ impl Client for TFLClient {
             .request(endpoint.method(), joined_url)
             .query(&[("app_key", &self.api_key)])
             .query(endpoint)
-            .send()?
-            //.await?
-            .json::<T>()?;
-        //.await?;
+            .send()
+            .await?
+            .json::<T>()
+            .await?;
         Ok(response)
     }
 }

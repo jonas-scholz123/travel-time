@@ -1,5 +1,4 @@
 use chrono::{Date, DateTime, NaiveDate, NaiveTime, Utc};
-use serde::de::IntoDeserializer;
 pub trait ParamValue {
     #[allow(clippy::wrong_self_convention)]
     /// The parameter value as a string.

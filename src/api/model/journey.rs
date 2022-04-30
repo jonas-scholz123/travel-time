@@ -1,5 +1,5 @@
-use chrono::{DateTime, NaiveDate, Utc};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 use crate::api::{endpoint::Endpoint, query_parameters::QueryParameters};
 
