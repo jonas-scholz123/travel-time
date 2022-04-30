@@ -11,13 +11,14 @@ async fn main() {
 
     let mut journey = JourneyRequest::default();
     journey.from = "w67qh".into();
-    journey.to = "sw72bb".into();
+    journey.to = "sw71aa".into();
     let a = client
         .query::<JourneyPlannerResult, JourneyRequest>(&journey)
         .await;
     match a {
         Ok(val) => {
             let b = val;
+            println!("Yay");
         } //println!("{}", val),
         Err(e) => println!("{}", e),
     }

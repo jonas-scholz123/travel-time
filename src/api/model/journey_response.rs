@@ -15,8 +15,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JourneyPlannerResult {
-    #[serde(rename = "$type")]
-    pub journey_planner_result_type: String,
     pub journeys: Vec<Journey>,
     pub lines: Vec<Line>,
     #[serde(rename = "stopMessages")]
@@ -31,8 +29,6 @@ pub struct JourneyPlannerResult {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JourneyVector {
-    #[serde(rename = "$type")]
-    pub journey_vector_type: String,
     pub from: String,
     pub to: String,
     pub via: String,
@@ -41,8 +37,6 @@ pub struct JourneyVector {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Journey {
-    #[serde(rename = "$type")]
-    pub journey_type: String,
     #[serde(rename = "startDateTime")]
     pub start_date_time: String,
     pub duration: i64,
@@ -54,8 +48,6 @@ pub struct Journey {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JourneyFare {
-    #[serde(rename = "$type")]
-    pub fare_type: String,
     #[serde(rename = "totalCost")]
     pub total_cost: i64,
     pub fares: Vec<FareElement>,
@@ -64,17 +56,13 @@ pub struct JourneyFare {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Caveat {
-    #[serde(rename = "$type")]
-    pub caveat_type: String,
     pub text: String,
     #[serde(rename = "type")]
-    pub purple_type: String,
+    pub caveat_type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FareElement {
-    #[serde(rename = "$type")]
-    pub fare_type: String,
     #[serde(rename = "lowZone")]
     pub low_zone: i64,
     #[serde(rename = "highZone")]
@@ -90,8 +78,6 @@ pub struct FareElement {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Tap {
-    #[serde(rename = "$type")]
-    pub tap_type: String,
     #[serde(rename = "atcoCode")]
     pub atco_code: String,
     #[serde(rename = "tapDetails")]
@@ -100,8 +86,6 @@ pub struct Tap {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TapDetails {
-    #[serde(rename = "$type")]
-    pub tap_details_type: String,
     #[serde(rename = "modeType")]
     pub mode_type: String,
     #[serde(rename = "validationType")]
@@ -109,7 +93,7 @@ pub struct TapDetails {
     #[serde(rename = "hostDeviceType")]
     pub host_device_type: String,
     #[serde(rename = "busRouteId")]
-    pub bus_route_id: String,
+    pub bus_route_id: Option<String>,
     #[serde(rename = "nationalLocationCode")]
     pub national_location_code: i64,
     #[serde(rename = "tapTimestamp")]
@@ -118,8 +102,6 @@ pub struct TapDetails {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Leg {
-    #[serde(rename = "$type")]
-    pub leg_type: String,
     pub duration: i64,
     pub instruction: Instruction,
     pub obstacles: Vec<Option<serde_json::Value>>,
@@ -147,8 +129,6 @@ pub struct Leg {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Point {
-    #[serde(rename = "$type")]
-    pub point_type: String,
     #[serde(rename = "naptanId")]
     pub naptan_id: Option<String>,
     #[serde(rename = "platformName")]
@@ -169,11 +149,9 @@ pub struct Point {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DisruptionElement {
-    #[serde(rename = "$type")]
-    pub disruption_type: String,
     pub category: String,
     #[serde(rename = "type")]
-    pub purple_type: String,
+    pub disruption_type: String,
     #[serde(rename = "categoryDescription")]
     pub category_description: String,
     pub description: String,
@@ -187,8 +165,6 @@ pub struct DisruptionElement {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Instruction {
-    #[serde(rename = "$type")]
-    pub instruction_type: String,
     pub summary: String,
     pub detailed: String,
     pub steps: Vec<Step>,
@@ -196,8 +172,6 @@ pub struct Instruction {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Step {
-    #[serde(rename = "$type")]
-    pub step_type: String,
     pub description: String,
     #[serde(rename = "turnDirection")]
     pub turn_direction: String,
@@ -230,12 +204,10 @@ pub struct Crowding {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Mode {
-    #[serde(rename = "$type")]
-    pub mode_type: String,
-    pub id: String,
+    pub id: Option<String>,
     pub name: String,
     #[serde(rename = "type")]
-    pub purple_type: String,
+    pub mode_type: String,
     #[serde(rename = "routeType")]
     pub route_type: String,
     pub status: String,
@@ -245,8 +217,6 @@ pub struct Mode {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Path {
-    #[serde(rename = "$type")]
-    pub path_type: String,
     #[serde(rename = "lineString")]
     pub line_string: String,
     #[serde(rename = "stopPoints")]
@@ -256,8 +226,6 @@ pub struct Path {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RouteOption {
-    #[serde(rename = "$type")]
-    pub route_option_type: String,
     pub name: String,
     pub directions: Vec<String>,
     #[serde(rename = "lineIdentifier")]
@@ -266,8 +234,6 @@ pub struct RouteOption {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Line {
-    #[serde(rename = "$type")]
-    pub line_type: String,
     pub id: String,
     pub name: String,
     #[serde(rename = "modeName")]
@@ -286,8 +252,6 @@ pub struct Line {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LineStatus {
-    #[serde(rename = "$type")]
-    pub line_status_type: String,
     pub id: i64,
     #[serde(rename = "statusSeverity")]
     pub status_severity: i64,
@@ -304,8 +268,6 @@ pub struct LineStatus {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LineStatusDisruption {
-    #[serde(rename = "$type")]
-    pub disruption_type: String,
     pub category: String,
     #[serde(rename = "categoryDescription")]
     pub category_description: String,
@@ -319,8 +281,6 @@ pub struct LineStatusDisruption {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ValidityPeriod {
-    #[serde(rename = "$type")]
-    pub validity_period_type: String,
     #[serde(rename = "fromDate")]
     pub from_date: String,
     #[serde(rename = "toDate")]
@@ -331,16 +291,12 @@ pub struct ValidityPeriod {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ServiceType {
-    #[serde(rename = "$type")]
-    pub service_type_type: String,
     pub name: String,
     pub uri: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchCriteria {
-    #[serde(rename = "$type")]
-    pub search_criteria_type: String,
     #[serde(rename = "dateTime")]
     pub date_time: String,
     #[serde(rename = "dateTimeType")]
@@ -351,8 +307,6 @@ pub struct SearchCriteria {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimeAdjustments {
-    #[serde(rename = "$type")]
-    pub time_adjustments_type: String,
     pub earliest: Earlier,
     pub earlier: Earlier,
     pub later: Earlier,
@@ -361,8 +315,6 @@ pub struct TimeAdjustments {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Earlier {
-    #[serde(rename = "$type")]
-    pub earlier_type: String,
     pub date: String,
     pub time: String,
     #[serde(rename = "timeIs")]
