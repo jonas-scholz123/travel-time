@@ -12,6 +12,13 @@ pub trait Client {
         endpoint: &E,
     ) -> Result<T>;
 
+    /*
+    async fn query_paged<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
+        &self,
+        endpoint: &Paged<E>,
+    ) -> Result<T>;
+    */
+
     async fn query_raw<E: Endpoint + Sync + Serialize>(&self, endpoint: &E) -> Result<String>;
 }
 
@@ -34,6 +41,33 @@ impl TFLClient {
 
 #[async_trait]
 impl Client for TFLClient {
+    async fn query<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
+        &self,
+        endpoint: &E,
+    ) -> Result<T>
+    where
+        E: Endpoint + Sync + Serialize,
+    {
+        let joined_url = self.base_url.join(&endpoint.endpoint())?;
+
+        let request = self
+            .reqwest_client
+            .request(endpoint.method(), joined_url.clone())
+            .query(&[("app_key", &self.api_key)])
+            .query(&endpoint.query_params())
+            .query(&endpoint.extra_query_params())
+            .build()?;
+
+        let response = self
+            .reqwest_client
+            .execute(request)
+            .await?
+            .json::<T>()
+            .await?;
+
+        Ok(response)
+    }
+
     async fn query_raw<E>(&self, endpoint: &E) -> anyhow::Result<String>
     where
         E: Endpoint + Sync + Serialize,
@@ -47,26 +81,6 @@ impl Client for TFLClient {
             .send()
             .await?
             .text()
-            .await?;
-        Ok(response)
-    }
-
-    async fn query<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
-        &self,
-        endpoint: &E,
-    ) -> Result<T>
-    where
-        E: Endpoint + Sync + Serialize,
-    {
-        let joined_url = self.base_url.join(&endpoint.endpoint())?;
-        let response = self
-            .reqwest_client
-            .request(endpoint.method(), joined_url)
-            .query(&[("app_key", &self.api_key)])
-            .query(endpoint)
-            .send()
-            .await?
-            .json::<T>()
             .await?;
         Ok(response)
     }

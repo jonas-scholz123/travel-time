@@ -33,6 +33,12 @@ impl ParamValue for u64 {
     }
 }
 
+impl ParamValue for usize {
+    fn as_value(&self) -> String {
+        format!("{}", self).into()
+    }
+}
+
 impl ParamValue for f64 {
     fn as_value(&self) -> String {
         format!("{}", self).into()

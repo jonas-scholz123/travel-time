@@ -158,7 +158,7 @@ pub struct DisruptionElement {
     pub summary: String,
     #[serde(rename = "additionalInfo")]
     pub additional_info: String,
-    pub created: String,
+    pub created: Option<String>,
     #[serde(rename = "lastUpdate")]
     pub last_update: String,
 }
@@ -239,7 +239,7 @@ pub struct Line {
     #[serde(rename = "modeName")]
     pub mode_name: String,
     pub disruptions: Vec<Option<serde_json::Value>>,
-    pub created: String,
+    pub created: Option<String>,
     pub modified: String,
     #[serde(rename = "lineStatuses")]
     pub line_statuses: Vec<LineStatus>,
@@ -257,7 +257,7 @@ pub struct LineStatus {
     pub status_severity: i64,
     #[serde(rename = "statusSeverityDescription")]
     pub status_severity_description: String,
-    pub created: String,
+    pub created: Option<String>,
     #[serde(rename = "validityPeriods")]
     pub validity_periods: Vec<ValidityPeriod>,
     #[serde(rename = "lineId")]
@@ -272,7 +272,7 @@ pub struct LineStatusDisruption {
     #[serde(rename = "categoryDescription")]
     pub category_description: String,
     pub description: String,
-    pub created: String,
+    pub created: Option<String>,
     #[serde(rename = "affectedRoutes")]
     pub affected_routes: Vec<Option<serde_json::Value>>,
     #[serde(rename = "affectedStops")]
