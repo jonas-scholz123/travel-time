@@ -1,29 +1,26 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StopsResponse {
-    #[serde(rename = "stopPoints")]
     pub stop_points: Option<Vec<StopPoint>>,
-    #[serde(rename = "pageSize")]
     pub page_size: Option<i64>,
     pub total: Option<i64>,
     pub page: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StopPoint {
-    #[serde(rename = "naptanId")]
     pub naptan_id: String,
     pub modes: Vec<StopPointMode>,
     //#[serde(rename = "icsCode")]
     //pub ics_code: Option<String>,
-    #[serde(rename = "stopType")]
     pub stop_type: Option<StopType>,
     //#[serde(rename = "stationNaptan")]
     //pub station_naptan: Option<String>,
     pub lines: Vec<Line>,
     pub id: String,
-    #[serde(rename = "commonName")]
     pub common_name: String,
     //pub children: Vec<StopPoint>,
     pub lat: f64,
