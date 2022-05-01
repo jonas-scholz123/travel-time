@@ -54,7 +54,7 @@ impl Client for TFLClient {
             .reqwest_client
             .request(endpoint.method(), joined_url.clone())
             .query(&[("app_key", &self.api_key)])
-            .query(&endpoint.query_params())
+            .query(&endpoint)
             .query(&endpoint.extra_query_params())
             .build()?;
 

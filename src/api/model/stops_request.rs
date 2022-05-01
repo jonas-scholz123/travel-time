@@ -1,22 +1,17 @@
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
-use serde_json::to_string;
 
-use crate::api::{endpoint::Endpoint, query_parameters::ExtraQueryParams};
+use crate::{api::endpoint::Endpoint, utils};
 
 use super::stops_response::StopPointMode;
-
-#[derive(Serialize, Deserialize, Derivative)]
-#[derivative(Default)]
-pub struct QueryParams {}
 
 #[derive(Derivative, Serialize, Deserialize)]
 #[derivative(Default)]
 pub struct StopsByModeRequest {
+    #[serde(skip)]
     modes: Vec<StopPointMode>,
     #[derivative(Default(value = "1"))]
     page: usize,
-    query_params: QueryParams,
 }
 
 impl Endpoint for StopsByModeRequest {
@@ -29,28 +24,10 @@ impl Endpoint for StopsByModeRequest {
             "StopPoint/Mode/{}/",
             self.modes
                 .iter()
-                .map(|m| {
-                    let string = to_string(m).unwrap();
-                    let mut chars = string.chars();
-                    chars.next();
-                    chars.next_back();
-                    chars.as_str().to_string()
-                })
+                .map(|m| utils::enum_to_string(m).unwrap())
                 .collect::<Vec<String>>()
                 .join(",")
         )
-    }
-
-    fn extra_query_params(&self) -> ExtraQueryParams {
-        let mut params = ExtraQueryParams::new();
-        params.push("page", self.page);
-        params
-    }
-
-    type Parameters = QueryParams;
-
-    fn query_params(&self) -> &Self::Parameters {
-        &self.query_params
     }
 }
 

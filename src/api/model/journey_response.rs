@@ -302,7 +302,7 @@ pub struct SearchCriteria {
     #[serde(rename = "dateTimeType")]
     pub date_time_type: String,
     #[serde(rename = "timeAdjustments")]
-    pub time_adjustments: TimeAdjustments,
+    pub time_adjustments: Option<TimeAdjustments>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

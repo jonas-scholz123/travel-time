@@ -3,16 +3,14 @@ use anyhow::Result;
 use api::{
     client::{Client, TFLClient},
     model::{
-        journey_request::JourneyRequest,
-        journey_response::JourneyPlannerResult,
-        stops_request::{self, StopsByModeRequest},
+        stops_request::StopsByModeRequest,
         stops_response::{StopPointMode, StopsResponse},
     },
 };
-use serde::{Serialize, Serializer};
 use serde_json::to_string;
 
 mod api;
+pub mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -36,7 +34,7 @@ async fn main() {
     println!("{}", a);
 
     match response {
-        Ok(val) => {
+        Ok(_) => {
             println!("Val");
         }
         Err(e) => println!("{}", e),

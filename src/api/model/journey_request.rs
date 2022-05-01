@@ -4,7 +4,13 @@ use serde::{Deserialize, Serialize};
 use crate::api::{endpoint::Endpoint, query_parameters::ExtraQueryParams};
 
 #[derive(Serialize, Deserialize, Default)]
-pub struct QueryParams {
+pub struct JourneyRequest {
+    #[serde(skip)]
+    pub from: String,
+    #[serde(skip)]
+    pub to: String,
+    #[serde(skip)]
+    pub datetime: Option<DateTime<Utc>>,
     pub via: Option<String>,
     pub national_search: Option<bool>,
     pub time_is: Option<String>,
@@ -27,14 +33,6 @@ pub struct QueryParams {
     pub walking_optimization: Option<bool>,
     pub taxi_only_trip: Option<bool>,
     pub route_between_entrances: Option<bool>,
-}
-
-#[derive(Serialize, Deserialize, Default)]
-pub struct JourneyRequest {
-    pub from: String,
-    pub to: String,
-    pub datetime: Option<DateTime<Utc>>,
-    pub query_params: QueryParams,
 }
 
 impl JourneyRequest {
@@ -63,12 +61,6 @@ impl Endpoint for JourneyRequest {
         params.push_opt("time", time);
         params
     }
-
-    type Parameters = QueryParams;
-
-    fn query_params(&self) -> &Self::Parameters {
-        &self.query_params
-    }
 }
 
 #[cfg(test)]
@@ -81,11 +73,11 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_response_parsing() {
+    async fn test_good_request() {
         let client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
 
         let mut journey = JourneyRequest::new("w67qh", "sw71aa");
-        journey.query_params.mode = Some("bus".into());
+        journey.mode = Some("bus".into());
 
         let response = client
             .query::<JourneyPlannerResult, JourneyRequest>(&journey)
@@ -98,5 +90,19 @@ mod tests {
                 panic!();
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_bad_request() {
+        let client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
+
+        let mut journey = JourneyRequest::new("w67qh", "sw71aa");
+        journey.mode = Some("asdasdas".into());
+
+        let response = client
+            .query::<JourneyPlannerResult, JourneyRequest>(&journey)
+            .await;
+
+        assert!(response.is_err());
     }
 }
