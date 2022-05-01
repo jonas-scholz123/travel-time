@@ -38,3 +38,39 @@ impl StopsByModeRequest {
         request
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::api::{
+        client::{Client, TFLClient},
+        model::stops_response::StopsResponse,
+    };
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_request() {
+        let client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
+
+        let mut request =
+            StopsByModeRequest::new(vec![StopPointMode::Dlr, StopPointMode::CableCar]);
+        request.page = 1;
+
+        let response = client.query::<StopsResponse, _>(&request).await;
+
+        if response.is_err() {
+            println!("{}", response.as_ref().err().unwrap())
+        }
+
+        assert!(response.is_ok());
+
+        let stop_points = response.unwrap().stop_points;
+        assert!(stop_points.is_some());
+        assert!(!stop_points.unwrap().is_empty());
+
+        request.page = 100;
+        let response = client.query::<StopsResponse, _>(&request).await;
+        let stop_points = response.unwrap().stop_points;
+        assert!(stop_points.is_none() || stop_points.unwrap().is_empty());
+    }
+}
