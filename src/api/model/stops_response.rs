@@ -37,48 +37,28 @@ pub struct Line {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-//#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub enum StopPointMode {
     Bus,
-    #[serde(rename = "cable-car")]
     CableCar,
-    #[serde(rename = "coach")]
     Coach,
-    #[serde(rename = "cycle")]
     Cycle,
-    #[serde(rename = "cycle-hire")]
     CycleHire,
-    #[serde(rename = "dlr")]
     Dlr,
-    #[serde(rename = "elizabeth-line")]
     ElizabethLine,
-    #[serde(rename = "interchange-keep-sitting")]
     InterchangeKeepSitting,
-    #[serde(rename = "interchange-secure")]
     InterchangeSecure,
-    #[serde(rename = "international-rail")]
     InternationalRail,
-    #[serde(rename = "national-rail")]
     NationalRail,
-    #[serde(rename = "overground")]
     Overground,
-    #[serde(rename = "replacement-bus")]
     ReplacementBus,
-    #[serde(rename = "river-bus")]
     RiverBus,
-    #[serde(rename = "river-tour")]
     RiverTour,
-    #[serde(rename = "plane")]
     Plane,
-    #[serde(rename = "taxi")]
     Taxi,
-    #[serde(rename = "tflrail")]
     Tflrail,
-    #[serde(rename = "tram")]
     Tram,
-    #[serde(rename = "tube")]
     Tube,
-    #[serde(rename = "walking")]
     Walking,
 }
 
