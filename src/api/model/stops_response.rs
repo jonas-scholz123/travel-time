@@ -99,6 +99,10 @@ pub enum Category {
     NearestPlaces,
     #[serde(rename = "Opening Time")]
     OpeningTime,
+    #[serde(rename = "Opening Time - Summer")]
+    OpeningTimeSummer,
+    #[serde(rename = "Opening Time - Winter")]
+    OpeningTimeWinter,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
