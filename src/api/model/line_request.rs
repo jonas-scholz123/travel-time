@@ -1,3 +1,5 @@
+use std::str::Lines;
+
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 
@@ -7,21 +9,19 @@ use super::stops_response::TransportMode;
 
 #[derive(Derivative, Serialize, Deserialize)]
 #[derivative(Default)]
-pub struct StopsByModeRequest {
+pub struct LinesByModeRequest {
     #[serde(skip)]
     modes: Vec<TransportMode>,
-    #[derivative(Default(value = "1"))]
-    pub page: usize,
 }
 
-impl Endpoint for StopsByModeRequest {
+impl Endpoint for LinesByModeRequest {
     fn method(&self) -> reqwest::Method {
         reqwest::Method::GET
     }
 
     fn endpoint(&self) -> String {
         format!(
-            "StopPoint/Mode/{}/",
+            "Line/Mode/{}/Route",
             self.modes
                 .iter()
                 .map(|m| utils::enum_to_string(m).unwrap())
@@ -31,9 +31,9 @@ impl Endpoint for StopsByModeRequest {
     }
 }
 
-impl StopsByModeRequest {
+impl LinesByModeRequest {
     pub fn new<T: Into<Vec<TransportMode>>>(stop_point_modes: T) -> Self {
-        let mut request = StopsByModeRequest::default();
+        let mut request = LinesByModeRequest::default();
         request.modes = stop_point_modes.into();
         request
     }
@@ -53,8 +53,7 @@ mod tests {
         let mut client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
 
         let mut request =
-            StopsByModeRequest::new(vec![TransportMode::Dlr, TransportMode::CableCar]);
-        request.page = 1;
+            LinesByModeRequest::new(vec![TransportMode::Dlr, TransportMode::CableCar]);
 
         let response = client.query::<StopsResponse, _>(&request).await;
 
@@ -68,7 +67,6 @@ mod tests {
         assert!(stop_points.is_some());
         assert!(!stop_points.unwrap().is_empty());
 
-        request.page = 100;
         let response = client.query::<StopsResponse, _>(&request).await;
         let stop_points = response.unwrap().stop_points;
         assert!(stop_points.is_none() || stop_points.unwrap().is_empty());
