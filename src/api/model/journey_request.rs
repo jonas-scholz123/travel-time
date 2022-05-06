@@ -67,7 +67,7 @@ impl Endpoint for JourneyRequest {
 mod tests {
     use crate::api::{
         client::{Client, TFLClient},
-        model::journey_response::{self, JourneyPlannerResult},
+        model::journey_response::JourneyPlannerResult,
     };
 
     use super::*;

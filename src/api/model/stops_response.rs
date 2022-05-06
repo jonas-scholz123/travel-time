@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumIter;
 
 use crate::db::mongo_doc::MongoDoc;
 
@@ -53,7 +52,7 @@ pub struct Line {
     pub uri: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum TransportMode {
     Bus,

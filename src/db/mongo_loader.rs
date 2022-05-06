@@ -16,7 +16,6 @@ use anyhow::Result;
 use chrono::{Duration, NaiveTime};
 use futures::{future::join_all, TryStreamExt};
 use mongodb::bson::doc;
-use strum::IntoEnumIterator;
 
 use super::{mongo_doc::MongoDoc, mongo_repo::MongoRepository};
 
@@ -142,8 +141,7 @@ impl<'a, C: Client> Loader<'a, C> {
     }
 
     pub async fn load_segments(&mut self) -> Result<()> {
-        let all_modes: Vec<TransportMode> = TransportMode::iter().collect();
-        let request = LinesByModeRequest::new(all_modes);
+        let request = LinesByModeRequest::new(Loader::<'a, C>::stop_point_modes());
         let lines = self.tfl_client.query::<LinesResult, _>(&request).await?;
         let mongo_repo = MongoRepository::<RouteEndpoints>::new(&self.mongo_client);
 

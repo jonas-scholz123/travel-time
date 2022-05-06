@@ -16,7 +16,6 @@ anyhow = "1.0.57"
 tokio = { version = "1", features = ["full"] }
 derivative = "2.2.0"
 mongodb = "2.2.1"
-strum = "0.24"
-strum_macros = "0.24"
 petgraph = "0.6.0"
 geoutils = "0.4.1"
+ball-tree = "0.3.0"

@@ -1,9 +1,3 @@
-use futures::{
-    stream::{StreamExt, TryStreamExt},
-    Stream,
-};
-use std::collections;
-
 use anyhow::Result;
 use mongodb::{
     bson::doc,

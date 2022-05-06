@@ -1,19 +1,9 @@
-use std::fs::create_dir;
-
 use anyhow::Result;
-use api::{
-    client::{Client, TFLClient},
-    model::{
-        line_request::LinesByModeRequest,
-        line_response::LinesResult,
-        stops_response::{StopPoint, TransportMode},
-    },
-};
+use api::{client::TFLClient, model::stops_response::StopPoint};
 use chrono::NaiveTime;
 use db::mongo_loader::Loader;
 use graph::graph::TflGraph;
 use mongodb::options::ClientOptions;
-use strum::IntoEnumIterator;
 
 use crate::{api::model::direct_connection::DirectConnection, db::mongo_repo::MongoRepository};
 
@@ -22,13 +12,13 @@ mod db;
 pub mod graph;
 pub mod utils;
 
-#[tokio::main(worker_threads = 30)]
+#[tokio::main]
 async fn main() {
     let result = load(LoadOptions {
         load_routes: false,
         load_stops: false,
         load_segments: false,
-        load_timetables: true,
+        load_timetables: false,
     });
 
     let printstr = match result.await {
@@ -58,15 +48,6 @@ async fn build_graph() -> Result<()> {
     let graph = TflGraph::from_repos(&connection_repo, &station_repo).await?;
     let scores = graph.time_dependent_dijkstra("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
     println!("{:#?}", scores);
-    Ok(())
-}
-
-async fn get_lines() -> Result<()> {
-    let mut tfl_client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
-
-    let all_modes: Vec<TransportMode> = TransportMode::iter().collect();
-    let request = LinesByModeRequest::new(all_modes);
-    let result = tfl_client.query::<LinesResult, _>(&request).await?;
     Ok(())
 }
 

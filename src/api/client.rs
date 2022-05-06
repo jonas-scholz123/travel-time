@@ -3,10 +3,7 @@ use async_trait::async_trait;
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Serialize};
 
-use super::{
-    endpoint::Endpoint,
-    errors::{ServerResponse, TflBadRequest},
-};
+use super::{endpoint::Endpoint, errors::TflBadRequest};
 
 #[async_trait]
 pub trait Client {
