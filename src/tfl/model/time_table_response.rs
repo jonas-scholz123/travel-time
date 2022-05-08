@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::db::mongo_doc::MongoDoc;
-
 use super::stops_response::{StopType, TransportMode};
 
 #[derive(Debug, Serialize, Deserialize)]

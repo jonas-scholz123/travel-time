@@ -12,7 +12,7 @@ impl ExtraQueryParams {
         ExtraQueryParams::default()
     }
 
-    pub fn push<K, V>(&mut self, key: K, val: V) -> &mut Self
+    /*pub fn push<K, V>(&mut self, key: K, val: V) -> &mut Self
     where
         K: Into<String>,
         V: ParamValue,
@@ -20,6 +20,7 @@ impl ExtraQueryParams {
         self.params.push((key.into(), val.as_value()));
         self
     }
+    */
 
     pub fn push_opt<K, V>(&mut self, key: K, val: Option<V>) -> &mut Self
     where

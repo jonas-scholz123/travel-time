@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 use anyhow::{Ok, Result};
 use futures::TryStreamExt;
 use mongodb::{bson::doc, Client, IndexModel};

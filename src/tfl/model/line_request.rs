@@ -31,9 +31,9 @@ impl Endpoint for LinesByModeRequest {
 
 impl LinesByModeRequest {
     pub fn new<T: Into<Vec<TransportMode>>>(stop_point_modes: T) -> Self {
-        let mut request = LinesByModeRequest::default();
-        request.modes = stop_point_modes.into();
-        request
+        Self {
+            modes: stop_point_modes.into(),
+        }
     }
 }
 
@@ -50,8 +50,7 @@ mod tests {
     async fn test_request() {
         let mut client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
 
-        let mut request =
-            LinesByModeRequest::new(vec![TransportMode::Dlr, TransportMode::CableCar]);
+        let request = LinesByModeRequest::new(vec![TransportMode::Dlr, TransportMode::CableCar]);
 
         let response = client.query::<StopsResponse, _>(&request).await;
 

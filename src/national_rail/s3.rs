@@ -1,10 +1,7 @@
 use anyhow::{Ok, Result};
 use rusoto_core::Region;
-use rusoto_s3::{Bucket, GetObjectRequest, ListObjectsRequest, S3Client, S3};
-use tokio::{
-    fs::File,
-    io::{copy, AsyncReadExt, AsyncWriteExt},
-};
+use rusoto_s3::{GetObjectRequest, ListObjectsRequest, S3Client, S3};
+use tokio::{fs::File, io::copy};
 
 pub struct NationalRailS3 {}
 

@@ -1,10 +1,7 @@
-use core::time;
-use std::env;
-
 use anyhow::Result;
 use chrono::NaiveTime;
 use db::mongo_loader::Loader;
-use graph::graph::TflGraph;
+use graph::tfl_graph::TflGraph;
 use mongodb::options::ClientOptions;
 use tfl::{client::TFLClient, model::stops_response::StopPoint};
 
@@ -22,7 +19,6 @@ pub mod utils;
 
 #[tokio::main]
 async fn main() {
-    NationalRailS3::get_timetable_data().await;
     let result = load(LoadOptions {
         load_routes: false,
         load_stops: false,
@@ -30,6 +26,7 @@ async fn main() {
         load_timetables: false,
         fix_timetables: false,
         fix_stoppoints: false,
+        load_national_rail_data: false,
         load_national_rail: false,
     });
 
@@ -38,13 +35,6 @@ async fn main() {
         Err(e) => e.to_string(),
     };
     println!("{}", printstr);
-
-    //let printstr = match result.await {
-    //    Ok(_) => "Done.".into(),
-    //    Err(e) => e.to_string(),
-    //};
-
-    //println!("{}", printstr);
 }
 
 async fn build_graph() -> Result<()> {
@@ -95,6 +85,7 @@ struct LoadOptions {
     load_timetables: bool,
     fix_timetables: bool,
     fix_stoppoints: bool,
+    load_national_rail_data: bool,
     load_national_rail: bool,
 }
 
@@ -144,6 +135,12 @@ async fn load(options: LoadOptions) -> Result<()> {
         println!("Fixing stop points.");
         DataFixer::fix_stop_point_repo(&mongo_client).await?;
         println!("Done fixing stop points.");
+    }
+
+    if options.load_national_rail_data {
+        println!("Loading national rail timetables from S3.");
+        NationalRailS3::get_timetable_data().await.unwrap();
+        println!("Done loading national rail timetables from S3.");
     }
 
     if options.load_national_rail {

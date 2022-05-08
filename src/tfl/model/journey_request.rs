@@ -37,10 +37,11 @@ pub struct JourneyRequest {
 
 impl JourneyRequest {
     pub fn new<T: Into<String>>(from: T, to: T) -> Self {
-        let mut request = JourneyRequest::default();
-        request.from = from.into();
-        request.to = to.into();
-        request
+        Self {
+            from: from.into(),
+            to: to.into(),
+            ..Default::default()
+        }
     }
 }
 
@@ -54,8 +55,8 @@ impl Endpoint for JourneyRequest {
     }
 
     fn extra_query_params(&self) -> ExtraQueryParams {
-        let date = self.datetime.map_or(None, |val| Some(val.date()));
-        let time = self.datetime.map_or(None, |val| Some(val.time()));
+        let date = self.datetime.map(|val| val.date());
+        let time = self.datetime.map(|val| val.time());
         let mut params = ExtraQueryParams::new();
         params.push_opt("date", date);
         params.push_opt("time", time);
@@ -84,7 +85,7 @@ mod tests {
             .await;
 
         match response {
-            Ok(_) => return,
+            Ok(_) => (),
             Err(e) => {
                 println!("{}", e);
                 panic!();

@@ -33,9 +33,10 @@ impl Endpoint for StopsByModeRequest {
 
 impl StopsByModeRequest {
     pub fn new<T: Into<Vec<TransportMode>>>(stop_point_modes: T) -> Self {
-        let mut request = StopsByModeRequest::default();
-        request.modes = stop_point_modes.into();
-        request
+        Self {
+            modes: stop_point_modes.into(),
+            ..Self::default()
+        }
     }
 }
 
