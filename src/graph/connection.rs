@@ -1,14 +1,17 @@
 use chrono::NaiveTime;
+use serde::{Deserialize, Serialize};
 
-use crate::api::model::direct_connection::DirectConnection;
+use crate::tfl::model::direct_connection::DirectConnection;
+use serde_big_array::BigArray;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Connection {
-    duration_minutes: u16,
+    pub duration_minutes: u16,
     // An array where the index is the minute of the day
     // and the value is the number of minutes until the
     // next train arrives.
-    departure_times: [u16; 24 * 60],
+    #[serde(with = "BigArray")]
+    pub departure_times: [u16; 24 * 60],
 }
 
 impl Connection {
@@ -16,14 +19,25 @@ impl Connection {
         let mut departure_times_arr = [0; 24 * 60];
         let midnight = NaiveTime::from_hms(0, 0, 0);
         let mut start = 0_usize;
+        // Depart times are pre-sorted in Mongo.
         for depart_time in &con.departure_times {
             let end = (*depart_time - midnight).num_minutes() as usize;
 
             let mut mins_until_depart = end - start;
+            departure_times_arr
+                .iter_mut()
+                .take(end)
+                .skip(start)
+                .for_each(|entry| {
+                    *entry = mins_until_depart as u16;
+                    mins_until_depart -= 1;
+                });
+            /*
             for i in start..end {
                 departure_times_arr[i] = mins_until_depart as u16;
                 mins_until_depart -= 1;
             }
+            */
             start = end + 1;
         }
 

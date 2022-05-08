@@ -1,24 +1,36 @@
+use core::time;
+use std::env;
+
 use anyhow::Result;
-use api::{client::TFLClient, model::stops_response::StopPoint};
 use chrono::NaiveTime;
 use db::mongo_loader::Loader;
 use graph::graph::TflGraph;
 use mongodb::options::ClientOptions;
+use tfl::{client::TFLClient, model::stops_response::StopPoint};
 
-use crate::{api::model::direct_connection::DirectConnection, db::mongo_repo::MongoRepository};
+use crate::{
+    db::{data_fixer::DataFixer, mongo_repo::MongoRepository},
+    national_rail::{s3::NationalRailS3, timetable_loader::TimetableLoader},
+    tfl::model::direct_connection::DirectConnection,
+};
 
-mod api;
 mod db;
 pub mod graph;
+pub mod national_rail;
+mod tfl;
 pub mod utils;
 
 #[tokio::main]
 async fn main() {
+    NationalRailS3::get_timetable_data().await;
     let result = load(LoadOptions {
         load_routes: false,
         load_stops: false,
         load_segments: false,
         load_timetables: false,
+        fix_timetables: false,
+        fix_stoppoints: false,
+        load_national_rail: false,
     });
 
     let printstr = match result.await {
@@ -27,28 +39,53 @@ async fn main() {
     };
     println!("{}", printstr);
 
-    let result = build_graph();
+    //let printstr = match result.await {
+    //    Ok(_) => "Done.".into(),
+    //    Err(e) => e.to_string(),
+    //};
 
-    let printstr = match result.await {
-        Ok(_) => "Graph built successfully.".into(),
-        Err(e) => e.to_string(),
-    };
-
-    println!("{}", printstr);
+    //println!("{}", printstr);
 }
 
 async fn build_graph() -> Result<()> {
-    let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
-    client_options.app_name = Some("TravelTime".to_string());
+    let path = "./cache/graph.json";
 
-    // Get a handle to the deployment.
-    let mongo_client = mongodb::Client::with_options(client_options)?;
-    let connection_repo = MongoRepository::<DirectConnection>::new(&mongo_client);
-    let station_repo = MongoRepository::<StopPoint>::new(&mongo_client);
-    let graph = TflGraph::from_repos(&connection_repo, &station_repo).await?;
+    println!("Building graph");
+    let cache = false;
+
+    let graph = match !cache {
+        true => build_graph_from_scratch().await?,
+        false => match TflGraph::from_cache(path).await {
+            Ok(g) => g,
+            Err(e) => {
+                println!("Falling back to rebuilding graph because {}", e);
+                build_graph_from_scratch().await?
+            }
+        },
+    };
+
+    if cache {
+        graph.cache(path).await?;
+    }
+
+    println!("Computing dijkstra's algorithm.");
     let scores = graph.time_dependent_dijkstra("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
     println!("{:#?}", scores);
     Ok(())
+}
+
+async fn build_graph_from_scratch() -> Result<TflGraph> {
+    let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
+    client_options.app_name = Some("TravelTime".to_string());
+    let mongo_client = mongodb::Client::with_options(client_options)?;
+    let connection_repo = MongoRepository::<DirectConnection>::new(&mongo_client);
+    let station_repo = MongoRepository::<StopPoint>::new(&mongo_client);
+    let mut graph = TflGraph::new();
+    graph
+        .build_from_repos(&connection_repo, &station_repo)
+        .await?;
+    graph.add_walking_edges();
+    Ok(graph)
 }
 
 struct LoadOptions {
@@ -56,6 +93,9 @@ struct LoadOptions {
     load_routes: bool,
     load_segments: bool,
     load_timetables: bool,
+    fix_timetables: bool,
+    fix_stoppoints: bool,
+    load_national_rail: bool,
 }
 
 async fn load(options: LoadOptions) -> Result<()> {
@@ -89,15 +129,31 @@ async fn load(options: LoadOptions) -> Result<()> {
     }
 
     if options.load_timetables {
-        /*
-        MongoRepository::<DirectConnection>::new(&mongo_client)
-            .collection
-            .drop(None)
-            .await?;
-        */
         println!("Loading timetables.");
         loader.load_timetables().await?;
         println!("Loaded timetables.");
     }
+
+    if options.fix_timetables {
+        println!("Fixing timetables.");
+        DataFixer::fix_direct_connection_repo(&mongo_client).await?;
+        println!("Done fixing timetables.");
+    }
+
+    if options.fix_stoppoints {
+        println!("Fixing stop points.");
+        DataFixer::fix_stop_point_repo(&mongo_client).await?;
+        println!("Done fixing stop points.");
+    }
+
+    if options.load_national_rail {
+        println!("Loading timetables.");
+        let timetable = TimetableLoader::new(&mongo_client);
+        timetable.load_timetable("./data/timetable.xml").await?;
+        println!("Loaded timetables.");
+    }
+
+    let _result = build_graph().await?;
+
     Ok(())
 }

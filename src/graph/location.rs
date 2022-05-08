@@ -1,12 +1,14 @@
 use std::ops::{Deref, DerefMut};
 
 use ball_tree::Point;
+use geo::prelude::HaversineDistance;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Location(pub geoutils::Location);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Location(pub geo::Point<f64>);
 
 impl Deref for Location {
-    type Target = geoutils::Location;
+    type Target = geo::Point<f64>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -21,18 +23,16 @@ impl DerefMut for Location {
 
 impl Point for Location {
     fn distance(&self, other: &Self) -> f64 {
-        self.haversine_distance_to(other).meters()
+        self.haversine_distance(other)
     }
 
     fn move_towards(&self, other: &Self, d: f64) -> Self {
         let dist = self.distance(other);
         if dist == 0. {
-            return Location(geoutils::Location::new(self.latitude(), self.longitude()));
+            return Location(*self.clone());
         }
 
-        let fraction = d / dist;
-        let lat = fraction * (other.latitude() - self.latitude());
-        let lon = fraction * (other.longitude() - self.longitude());
-        Location(geoutils::Location::new(lat, lon))
+        let point = (self.0 + other.0) * d / dist;
+        Location(point)
     }
 }

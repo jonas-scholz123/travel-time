@@ -29,6 +29,7 @@ pub struct StopPoint {
     //pub children: Vec<StopPoint>,
     pub lat: f64,
     pub lon: f64,
+    pub tiploc: Option<String>,
 }
 
 impl MongoDoc for StopPoint {

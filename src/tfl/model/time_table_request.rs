@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::endpoint::Endpoint;
+use crate::tfl::endpoint::Endpoint;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimetableRequest {

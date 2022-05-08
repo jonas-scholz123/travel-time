@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::api::{
+use crate::tfl::{
     client::Client,
     model::{
         direct_connection::DirectConnection,
@@ -68,7 +68,7 @@ impl<'a, C: Client> Loader<'a, C> {
             println!("Found {} matching stops", total);
         }
 
-        let mongo_repo = MongoRepository::<StopPoint>::new(&self.mongo_client);
+        let mongo_repo = MongoRepository::<StopPoint>::new(self.mongo_client);
         let existing_doc_count = mongo_repo.collection.count_documents(None, None).await?;
 
         // Go through page by page and transfer to Mongo.
@@ -111,7 +111,7 @@ impl<'a, C: Client> Loader<'a, C> {
         let all_modes: Vec<TransportMode> = Loader::<'_, C>::stop_point_modes();
         let request = LinesByModeRequest::new(all_modes);
         let mut lines = self.tfl_client.query::<LinesResult, _>(&request).await?;
-        let mongo_repo = MongoRepository::<RouteEndpoints>::new(&self.mongo_client);
+        let mongo_repo = MongoRepository::<RouteEndpoints>::new(self.mongo_client);
 
         for line in &mut lines {
             for sec in &mut line.route_sections {
@@ -133,7 +133,7 @@ impl<'a, C: Client> Loader<'a, C> {
                 // Else we insert a new one.
                 sec.line_ids.get_or_insert(Vec::new()).push(line.id.clone());
                 sec.set_id();
-                mongo_repo.insert(&sec).await?;
+                mongo_repo.insert(sec).await?;
             }
         }
 
@@ -143,13 +143,13 @@ impl<'a, C: Client> Loader<'a, C> {
     pub async fn load_segments(&mut self) -> Result<()> {
         let request = LinesByModeRequest::new(Loader::<'a, C>::stop_point_modes());
         let lines = self.tfl_client.query::<LinesResult, _>(&request).await?;
-        let mongo_repo = MongoRepository::<RouteEndpoints>::new(&self.mongo_client);
+        let mongo_repo = MongoRepository::<RouteEndpoints>::new(self.mongo_client);
 
         let results = join_all(
             lines
                 .iter()
                 .flat_map(|l| l.route_sections.iter())
-                .map(|sec| mongo_repo.insert_or_replace(&sec)),
+                .map(|sec| mongo_repo.insert_or_replace(sec)),
         )
         .await;
 
@@ -164,10 +164,11 @@ impl<'a, C: Client> Loader<'a, C> {
 
     // TODO: also reverse?
     pub async fn load_timetables(&mut self) -> Result<()> {
-        let routes_repo = MongoRepository::<RouteEndpoints>::new(&self.mongo_client);
+        let routes_repo = MongoRepository::<RouteEndpoints>::new(self.mongo_client);
         let mut cursor = routes_repo.get_all().await?;
 
         while let Some(route) = cursor.try_next().await? {
+            // This should be for each line ID and backwards + forwards.
             let line_id = match route.line_ids {
                 Some(line_ids) => line_ids.first().unwrap().clone(),
                 // TOIDO Change
@@ -202,13 +203,13 @@ impl<'a, C: Client> Loader<'a, C> {
             for journey in &schedule.unwrap().known_journeys {
                 interval_id_to_journeys
                     .entry(journey.interval_id.to_string())
-                    .or_insert(Vec::new())
+                    .or_insert_with(Vec::new)
                     .push(journey);
             }
 
             for interval in &route.station_intervals {
                 let journeys = interval_id_to_journeys.get(&interval.id);
-                if let None = journeys {
+                if journeys.is_none() {
                     println!("Error: missing interval {}.", interval.id);
                     continue;
                 }
@@ -221,7 +222,7 @@ impl<'a, C: Client> Loader<'a, C> {
                     let destination = section.stop_id.clone();
                     let minutes_between_stations = section.time_to_arrival - total_time_travelled;
 
-                    let departure_times = journeys
+                    let mut departure_times = journeys
                         .iter()
                         .map(|j| {
                             let hr_int = j.hour.parse::<u32>().unwrap() % 24;
@@ -231,6 +232,9 @@ impl<'a, C: Client> Loader<'a, C> {
                         })
                         .collect::<Vec<NaiveTime>>();
                     total_time_travelled = section.time_to_arrival;
+
+                    departure_times.sort();
+                    departure_times.dedup();
 
                     let mut direct_connection = DirectConnection {
                         id: None,

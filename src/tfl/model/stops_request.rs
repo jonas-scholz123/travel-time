@@ -1,7 +1,7 @@
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 
-use crate::{api::endpoint::Endpoint, utils};
+use crate::{tfl::endpoint::Endpoint, utils};
 
 use super::stops_response::TransportMode;
 
@@ -41,7 +41,7 @@ impl StopsByModeRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::api::{
+    use crate::tfl::{
         client::{Client, TFLClient},
         model::stops_response::StopsResponse,
     };

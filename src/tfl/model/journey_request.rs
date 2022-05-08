@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::api::{endpoint::Endpoint, query_parameters::ExtraQueryParams};
+use crate::tfl::{endpoint::Endpoint, query_parameters::ExtraQueryParams};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct JourneyRequest {
@@ -65,7 +65,7 @@ impl Endpoint for JourneyRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::api::{
+    use crate::tfl::{
         client::{Client, TFLClient},
         model::journey_response::JourneyPlannerResult,
     };
