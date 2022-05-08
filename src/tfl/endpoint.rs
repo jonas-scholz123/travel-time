@@ -1,8 +1,10 @@
 use reqwest::Method;
+use serde::de::DeserializeOwned;
 
 use super::query_parameters::ExtraQueryParams;
 
 pub trait Endpoint {
+    type Returns: DeserializeOwned + Send + Sync;
     fn method(&self) -> Method;
     fn endpoint(&self) -> String;
     fn extra_query_params(&self) -> ExtraQueryParams {

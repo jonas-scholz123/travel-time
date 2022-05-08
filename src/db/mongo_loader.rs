@@ -5,9 +5,9 @@ use crate::tfl::{
     model::{
         direct_connection::DirectConnection,
         line_request::LinesByModeRequest,
-        line_response::{LinesResult, RouteEndpoints},
+        line_response::RouteEndpoints,
         stops_request::StopsByModeRequest,
-        stops_response::{StopPoint, StopsResponse, TransportMode},
+        stops_response::{StopPoint, TransportMode},
         time_table_request::TimetableRequest,
         time_table_response::TimetableResult,
     },
@@ -62,7 +62,7 @@ impl<'a, C: Client> Loader<'a, C> {
         //let all_stop_point_modes: Vec<StopPointMode> = StopPointMode::iter().collect();
 
         let mut request = StopsByModeRequest::new(Loader::<'_, C>::stop_point_modes());
-        let mut response = self.tfl_client.query::<StopsResponse, _>(&request).await?;
+        let mut response = self.tfl_client.query(&request).await?;
 
         if let Some(total) = response.total {
             println!("Found {} matching stops", total);
@@ -79,7 +79,7 @@ impl<'a, C: Client> Loader<'a, C> {
             }
 
             println!("Fetching page {} ...", request.page);
-            response = self.tfl_client.query::<StopsResponse, _>(&request).await?;
+            response = self.tfl_client.query(&request).await?;
             println!("Done fetching page {}.", request.page);
 
             let results = join_all(
@@ -110,7 +110,7 @@ impl<'a, C: Client> Loader<'a, C> {
     pub async fn load_routes(&mut self) -> Result<()> {
         let all_modes: Vec<TransportMode> = Loader::<'_, C>::stop_point_modes();
         let request = LinesByModeRequest::new(all_modes);
-        let mut lines = self.tfl_client.query::<LinesResult, _>(&request).await?;
+        let mut lines = self.tfl_client.query(&request).await?;
         let mongo_repo = MongoRepository::<RouteEndpoints>::new(self.mongo_client);
 
         for line in &mut lines {
@@ -142,7 +142,7 @@ impl<'a, C: Client> Loader<'a, C> {
 
     pub async fn load_segments(&mut self) -> Result<()> {
         let request = LinesByModeRequest::new(Loader::<'a, C>::stop_point_modes());
-        let lines = self.tfl_client.query::<LinesResult, _>(&request).await?;
+        let lines = self.tfl_client.query(&request).await?;
         let mongo_repo = MongoRepository::<RouteEndpoints>::new(self.mongo_client);
 
         let results = join_all(
@@ -177,7 +177,7 @@ impl<'a, C: Client> Loader<'a, C> {
             let origination = route.originator;
             let destination = route.destination;
             let request = TimetableRequest::new(line_id, origination, destination);
-            let result = self.tfl_client.query::<TimetableResult, _>(&request).await;
+            let result = self.tfl_client.query(&request).await;
 
             match result {
                 Ok(result) => self.save_direct_connections(result).await?,

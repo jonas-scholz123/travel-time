@@ -1,16 +1,14 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use futures::{stream, StreamExt, TryStreamExt};
 use reqwest::Url;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::Serialize;
 
 use super::{endpoint::Endpoint, errors::TflBadRequest};
 
 #[async_trait]
 pub trait Client {
-    async fn query<T: DeserializeOwned + Send + Sync, E: Endpoint + Sync + Serialize>(
-        &mut self,
-        endpoint: &E,
-    ) -> Result<T>;
+    async fn query<E: Endpoint + Sync + Serialize>(&mut self, endpoint: &E) -> Result<E::Returns>;
 
     /*
     async fn query_paged<T: DeserializeOwned, E: Endpoint + Sync + Serialize>(
@@ -20,6 +18,11 @@ pub trait Client {
     */
 
     async fn query_raw<E: Endpoint + Sync + Serialize>(&self, endpoint: &E) -> Result<String>;
+
+    async fn query_concurrently<E, I>(&self, endpoints: I) -> Result<Vec<E::Returns>>
+    where
+        E: Endpoint + Sync + Serialize,
+        I: Iterator<Item = E> + Send;
 }
 
 pub struct TFLClient {
@@ -43,10 +46,7 @@ impl TFLClient {
 
 #[async_trait]
 impl Client for TFLClient {
-    async fn query<T: DeserializeOwned + Send + Sync, E: Endpoint + Sync + Serialize>(
-        &mut self,
-        endpoint: &E,
-    ) -> Result<T>
+    async fn query<E: Endpoint + Sync + Serialize>(&mut self, endpoint: &E) -> Result<E::Returns>
     where
         E: Endpoint + Sync + Serialize,
     {
@@ -60,14 +60,6 @@ impl Client for TFLClient {
             .query(&endpoint.extra_query_params())
             .build()?;
 
-        /*
-                let response = self
-                    .reqwest_client
-                    .execute(request)
-                    .await?
-                    .json::<ServerResponse<T>>()
-                    .await?;
-        */
         self.query_counter += 1;
         if self.query_counter % 100 == 0 {
             println!("Sent {} Queries", self.query_counter)
@@ -107,5 +99,18 @@ impl Client for TFLClient {
             .text()
             .await?;
         Ok(response)
+    }
+
+    async fn query_concurrently<E, I>(&self, endpoints: I) -> Result<Vec<E::Returns>>
+    where
+        E: Endpoint + Sync + Serialize,
+        I: Iterator<Item = E> + Send,
+    {
+        todo!()
+        //stream::iter(endpoints)
+        //    .map(|e| self.query(&e))
+        //    .buffer_unordered(5)
+        //    .try_collect()
+        //    .await
     }
 }

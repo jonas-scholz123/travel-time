@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::tfl::endpoint::Endpoint;
 
+use super::time_table_response::TimetableResult;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimetableRequest {
     #[serde(skip)]
@@ -23,6 +25,8 @@ impl Endpoint for TimetableRequest {
             self.line_name, self.from_station, self.to_station
         )
     }
+
+    type Returns = TimetableResult;
 }
 
 impl TimetableRequest {

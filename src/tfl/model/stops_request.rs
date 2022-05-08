@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{tfl::endpoint::Endpoint, utils};
 
-use super::stops_response::TransportMode;
+use super::stops_response::{StopsResponse, TransportMode};
 
 #[derive(Derivative, Serialize, Deserialize)]
 #[derivative(Default)]
@@ -29,6 +29,8 @@ impl Endpoint for StopsByModeRequest {
                 .join(",")
         )
     }
+
+    type Returns = StopsResponse;
 }
 
 impl StopsByModeRequest {
@@ -42,10 +44,7 @@ impl StopsByModeRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::tfl::{
-        client::{Client, TFLClient},
-        model::stops_response::StopsResponse,
-    };
+    use crate::tfl::client::{Client, TFLClient};
 
     use super::*;
 
@@ -57,7 +56,7 @@ mod tests {
             StopsByModeRequest::new(vec![TransportMode::Dlr, TransportMode::CableCar]);
         request.page = 1;
 
-        let response = client.query::<StopsResponse, _>(&request).await;
+        let response = client.query(&request).await;
 
         if response.is_err() {
             println!("{}", response.as_ref().err().unwrap())
@@ -70,7 +69,7 @@ mod tests {
         assert!(!stop_points.unwrap().is_empty());
 
         request.page = 100;
-        let response = client.query::<StopsResponse, _>(&request).await;
+        let response = client.query(&request).await;
         let stop_points = response.unwrap().stop_points;
         assert!(stop_points.is_none() || stop_points.unwrap().is_empty());
     }

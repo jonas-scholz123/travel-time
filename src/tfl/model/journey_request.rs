@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::tfl::{endpoint::Endpoint, query_parameters::ExtraQueryParams};
 
+use super::journey_response::JourneyPlannerResult;
+
 #[derive(Serialize, Deserialize, Default)]
 pub struct JourneyRequest {
     #[serde(skip)]
@@ -62,14 +64,13 @@ impl Endpoint for JourneyRequest {
         params.push_opt("time", time);
         params
     }
+
+    type Returns = JourneyPlannerResult;
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::tfl::{
-        client::{Client, TFLClient},
-        model::journey_response::JourneyPlannerResult,
-    };
+    use crate::tfl::client::{Client, TFLClient};
 
     use super::*;
 
@@ -80,9 +81,7 @@ mod tests {
         let mut journey = JourneyRequest::new("w67qh", "sw71aa");
         journey.mode = Some("bus".into());
 
-        let response = client
-            .query::<JourneyPlannerResult, JourneyRequest>(&journey)
-            .await;
+        let response = client.query(&journey).await;
 
         match response {
             Ok(_) => (),
@@ -100,9 +99,7 @@ mod tests {
         let mut journey = JourneyRequest::new("w67qh", "sw71aa");
         journey.mode = Some("asdasdas".into());
 
-        let response = client
-            .query::<JourneyPlannerResult, JourneyRequest>(&journey)
-            .await;
+        let response = client.query(&journey).await;
 
         assert!(response.is_err());
     }
