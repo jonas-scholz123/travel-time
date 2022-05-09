@@ -5,9 +5,9 @@ use super::stops_response::{StopType, TransportMode};
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimetableResult {
-    pub line_id: String,
-    pub line_name: String,
-    pub direction: String,
+    pub line_id: Option<String>,
+    pub line_name: Option<String>,
+    pub direction: Option<String>,
     pub stations: Vec<Station>,
     pub stops: Vec<Station>,
     pub timetable: Timetable,

@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{tfl::endpoint::Endpoint, utils};
 
-use super::{
-    line_response::LinesResult,
-    stops_response::{StopsResponse, TransportMode},
-};
+use super::{line_response::LinesResult, stops_response::TransportMode};
 
 #[derive(Derivative, Serialize, Deserialize)]
 #[derivative(Default)]
@@ -50,7 +47,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_request() {
-        let mut client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
+        let client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
 
         let request = LinesByModeRequest::new(vec![TransportMode::Dlr, TransportMode::CableCar]);
 

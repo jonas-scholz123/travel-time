@@ -23,7 +23,7 @@ async fn main() {
         load_routes: false,
         load_stops: false,
         load_segments: false,
-        load_timetables: false,
+        load_timetables: true,
         fix_timetables: false,
         fix_stoppoints: false,
         load_national_rail_data: false,

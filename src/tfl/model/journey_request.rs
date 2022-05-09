@@ -76,7 +76,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_good_request() {
-        let mut client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
+        let client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
 
         let mut journey = JourneyRequest::new("w67qh", "sw71aa");
         journey.mode = Some("bus".into());
@@ -94,7 +94,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bad_request() {
-        let mut client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
+        let client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
 
         let mut journey = JourneyRequest::new("w67qh", "sw71aa");
         journey.mode = Some("asdasdas".into());
