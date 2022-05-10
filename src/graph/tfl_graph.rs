@@ -1,6 +1,6 @@
 use std::{
     collections::hash_map::Entry::{Occupied, Vacant},
-    collections::{BinaryHeap, HashMap},
+    collections::{BinaryHeap, HashMap, HashSet},
     fs,
 };
 
@@ -11,7 +11,7 @@ use crate::{
 use anyhow::Result;
 use ball_tree::BallTree;
 use chrono::NaiveTime;
-use futures::TryStreamExt;
+use futures::{stream, StreamExt, TryStreamExt};
 use petgraph::{
     graph::{EdgeReference, NodeIndex},
     visit::{EdgeRef, IntoNodeReferences, VisitMap, Visitable},
@@ -19,6 +19,7 @@ use petgraph::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use tokio::time::Instant;
 
 use super::{connection::Connection, min_scored::MinScored, path::Path, station::Station};
 
@@ -38,26 +39,52 @@ impl TflGraph {
         connection_repo: &MongoRepository<DirectConnection>,
         stop_repo: &MongoRepository<StopPoint>,
     ) -> Result<()> {
+        let now = Instant::now();
         let mut cursor = connection_repo.get_all().await?;
+        let edges = cursor.try_collect::<Vec<_>>().await?;
+        println!("collect edges: {}ms", now.elapsed().as_millis());
+        let now = Instant::now();
 
-        while let Some(edge) = cursor.try_next().await? {
-            let from_sp = stop_repo.get_by_id(edge.origin.clone()).await?;
-            let to_sp = stop_repo.get_by_id(edge.destination.clone()).await?;
+        let mut stop_ids = HashSet::new();
+        edges.iter().for_each(|e| {
+            stop_ids.insert(&e.origin);
+            stop_ids.insert(&e.destination);
+        });
+
+        let x = stream::iter(stop_ids)
+            .map(|stop_id| stop_repo.get_by_id(stop_id))
+            .buffer_unordered(30)
+            //.try_collect::<Vec<_>>()
+            .map(|stop| stop.unwrap().unwrap())
+            .map(|stop| (stop.id.clone(), stop))
+            .collect::<HashMap<_, _>>()
+            .await;
+        println!("collect stop points: {}ms", now.elapsed().as_millis());
+        let now = Instant::now();
+
+        //while let Some(edge) = cursor.try_next().await? {
+        for edge in edges {
+            let from_sp = x.get(&edge.origin).unwrap();
+            let to_sp = x.get(&edge.destination).unwrap();
             let from_idx = TflGraph::get_or_insert_node_idx(
                 &mut self.graph,
                 &mut self.station_id_to_node,
-                &from_sp.unwrap(),
+                from_sp,
             );
             let to_idx = TflGraph::get_or_insert_node_idx(
                 &mut self.graph,
                 &mut self.station_id_to_node,
-                &to_sp.unwrap(),
+                to_sp,
             );
 
             let connection = Connection::from_direct_connection(&edge);
 
             self.graph.add_edge(from_idx, to_idx, connection);
         }
+        println!(
+            "inserted edges/vertices stop points: {}ms",
+            now.elapsed().as_millis()
+        );
 
         Ok(())
     }

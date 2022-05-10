@@ -11,3 +11,4 @@ Cargo.lock
 
 data/
 cache/
+flamegraph.svg

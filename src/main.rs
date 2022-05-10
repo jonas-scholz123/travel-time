@@ -4,6 +4,7 @@ use db::mongo_loader::Loader;
 use graph::tfl_graph::TflGraph;
 use mongodb::options::ClientOptions;
 use tfl::{client::TFLClient, model::stops_response::StopPoint};
+use tokio::time::Instant;
 
 use crate::{
     db::{data_fixer::DataFixer, mongo_repo::MongoRepository},
@@ -23,7 +24,7 @@ async fn main() {
         load_routes: false,
         load_stops: false,
         load_segments: false,
-        load_timetables: true,
+        load_timetables: false,
         fix_timetables: false,
         fix_stoppoints: false,
         load_national_rail_data: false,
@@ -38,29 +39,14 @@ async fn main() {
 }
 
 async fn build_graph() -> Result<()> {
-    let path = "./cache/graph.json";
-
     println!("Building graph");
-    let cache = false;
-
-    let graph = match !cache {
-        true => build_graph_from_scratch().await?,
-        false => match TflGraph::from_cache(path).await {
-            Ok(g) => g,
-            Err(e) => {
-                println!("Falling back to rebuilding graph because {}", e);
-                build_graph_from_scratch().await?
-            }
-        },
-    };
-
-    if cache {
-        graph.cache(path).await?;
-    }
+    let graph = build_graph_from_scratch().await?;
 
     println!("Computing dijkstra's algorithm.");
-    let scores = graph.time_dependent_dijkstra("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
-    println!("{:#?}", scores);
+    let now = Instant::now();
+    let _scores = graph.time_dependent_dijkstra("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
+    println!("Time for dijkstra's: {}ms", now.elapsed().as_millis());
+    //println!("{:#?}", scores);
     Ok(())
 }
 
@@ -71,10 +57,16 @@ async fn build_graph_from_scratch() -> Result<TflGraph> {
     let connection_repo = MongoRepository::<DirectConnection>::new(&mongo_client);
     let station_repo = MongoRepository::<StopPoint>::new(&mongo_client);
     let mut graph = TflGraph::new();
+    let now = Instant::now();
+    println!("Loading graph data and creating nodes/edges");
     graph
         .build_from_repos(&connection_repo, &station_repo)
         .await?;
+    println!("Done. Time elapsed: {}ms", now.elapsed().as_millis());
+    let now = Instant::now();
+    println!("Adding walking edges");
     graph.add_walking_edges();
+    println!("Done. Time elapsed: {}ms", now.elapsed().as_millis());
     Ok(graph)
 }
 
