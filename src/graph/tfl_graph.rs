@@ -12,16 +12,20 @@ use anyhow::Result;
 use ball_tree::BallTree;
 use chrono::NaiveTime;
 use futures::{stream, StreamExt, TryStreamExt};
+use mongodb::Client;
 use petgraph::{
     graph::{EdgeReference, NodeIndex},
-    visit::{EdgeRef, IntoNodeReferences, VisitMap, Visitable},
+    visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences, NodeRef, VisitMap, Visitable},
     Graph,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::time::Instant;
 
-use super::{connection::Connection, min_scored::MinScored, path::Path, station::Station};
+use super::{
+    connection::Connection, min_scored::MinScored, node_pair::NodePair, path::Path,
+    station::Station,
+};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TflGraph {
@@ -30,20 +34,26 @@ pub struct TflGraph {
 }
 
 impl TflGraph {
-    pub fn new() -> Self {
-        Self::default()
+    pub async fn new(mongo_client: Client) -> Result<Self> {
+        let mut result = Self::default();
+        result
+            .add_stations(
+                &MongoRepository::new(&mongo_client),
+                &MongoRepository::new(&mongo_client),
+            )
+            .await?;
+        result.add_walking_edges();
+        Ok(result)
     }
 
-    pub async fn build_from_repos(
+    async fn add_stations(
         &mut self,
         connection_repo: &MongoRepository<DirectConnection>,
         stop_repo: &MongoRepository<StopPoint>,
     ) -> Result<()> {
         let now = Instant::now();
-        let mut cursor = connection_repo.get_all().await?;
+        let cursor = connection_repo.get_all().await?;
         let edges = cursor.try_collect::<Vec<_>>().await?;
-        println!("collect edges: {}ms", now.elapsed().as_millis());
-        let now = Instant::now();
 
         let mut stop_ids = HashSet::new();
         edges.iter().for_each(|e| {
@@ -51,7 +61,7 @@ impl TflGraph {
             stop_ids.insert(&e.destination);
         });
 
-        let x = stream::iter(stop_ids)
+        let stop_point_map = stream::iter(stop_ids)
             .map(|stop_id| stop_repo.get_by_id(stop_id))
             .buffer_unordered(30)
             //.try_collect::<Vec<_>>()
@@ -59,13 +69,11 @@ impl TflGraph {
             .map(|stop| (stop.id.clone(), stop))
             .collect::<HashMap<_, _>>()
             .await;
-        println!("collect stop points: {}ms", now.elapsed().as_millis());
-        let now = Instant::now();
 
         //while let Some(edge) = cursor.try_next().await? {
         for edge in edges {
-            let from_sp = x.get(&edge.origin).unwrap();
-            let to_sp = x.get(&edge.destination).unwrap();
+            let from_sp = stop_point_map.get(&edge.origin).unwrap();
+            let to_sp = stop_point_map.get(&edge.destination).unwrap();
             let from_idx = TflGraph::get_or_insert_node_idx(
                 &mut self.graph,
                 &mut self.station_id_to_node,
@@ -81,10 +89,6 @@ impl TflGraph {
 
             self.graph.add_edge(from_idx, to_idx, connection);
         }
-        println!(
-            "inserted edges/vertices stop points: {}ms",
-            now.elapsed().as_millis()
-        );
 
         Ok(())
     }
@@ -115,19 +119,6 @@ impl TflGraph {
             })
             .collect::<Vec<_>>();
 
-        //let printies = walking_connections
-        //    .iter()
-        //    .map(|(n1, n2, con)| {
-        //        (
-        //            graph.node_weight(*n1).unwrap(),
-        //            graph.node_weight(**n2).unwrap(),
-        //            con.duration_minutes,
-        //        )
-        //    })
-        //    .collect::<Vec<_>>();
-
-        //println!("{:#?}", printies);
-
         for (idx, close_idx, con) in walking_connections {
             self.graph.add_edge(idx, close_idx, con);
         }
@@ -135,13 +126,40 @@ impl TflGraph {
 
     pub async fn from_cache<S: Into<String>>(path: S) -> Result<Self> {
         //let graph = fs::read_to_string("/etc/hosts").expect("Unable to read file");
+        let now = Instant::now();
         let self_string = fs::read_to_string(path.into())?;
-        Ok(serde_json::from_str(&self_string)?)
+        println!("File reading: {}ms", now.elapsed().as_millis());
+        let now = Instant::now();
+        let ret = Ok(serde_json::from_str(&self_string)?);
+        println!("Deserialisation: {}ms", now.elapsed().as_millis());
+        ret
     }
 
     pub async fn cache<S: Into<String>>(&self, path: S) -> Result<()> {
         let graph_string = json!(self).to_string();
         fs::write(path.into(), graph_string)?;
+        Ok(())
+    }
+
+    pub async fn cache2(&self, client: &Client) -> Result<()> {
+        let repo: MongoRepository<NodePair> = MongoRepository::new(client);
+        let node_pairs: Vec<_> = self
+            .graph
+            .edge_references()
+            .into_iter()
+            .map(|e| {
+                let from = self.graph.node_weight(e.source()).unwrap();
+                let to = self.graph.node_weight(e.source()).unwrap();
+                let edge = e.weight();
+                NodePair {
+                    from: from.clone(),
+                    to: to.clone(),
+                    edge: edge.clone(),
+                }
+            })
+            .collect();
+        repo.collection.insert_many(node_pairs, None).await?;
+
         Ok(())
     }
 
@@ -183,14 +201,6 @@ impl TflGraph {
                 continue;
             }
             let edges: Vec<EdgeReference<Connection>> = self.graph.edges(node_idx).collect();
-            /*
-                        println!(
-                            "{:?} corresponding to station id {} has {} edges",
-                            node_idx,
-                            self.graph.node_weight(node_idx).unwrap().id,
-                            edges.len()
-                        );
-            */
             for edge in edges {
                 let next = edge.target();
                 if visited.is_visited(&next) {
@@ -203,25 +213,12 @@ impl TflGraph {
                 // Score is the number of minutes required to reach the node since the start of the journey.
                 let mut next_score = time_to_depart + travel_time + node_score;
 
-                if next == start_idx {
-                    println!(
-                        "CCC: start: {:?}, next: {:?}, current: {:?}",
-                        start_idx, next, node_idx
-                    );
-                }
-
                 match scores.entry(next) {
                     Occupied(ent) => {
                         let existing_score = *ent.get();
                         if next_score < existing_score {
                             *ent.into_mut() = next_score;
                             parents.insert(next, node_idx);
-                            if next == start_idx {
-                                println!(
-                                    "AAA: start: {:?}, next: {:?}, current: {:?}",
-                                    start_idx, next, node_idx
-                                );
-                            }
                         } else {
                             next_score = existing_score;
                         }
@@ -229,12 +226,6 @@ impl TflGraph {
                     Vacant(ent) => {
                         ent.insert(next_score);
                         parents.insert(next, node_idx);
-                        if next == start_idx {
-                            println!(
-                                "BBB: start: {:?}, next: {:?}, current: {:?}",
-                                start_idx, next, node_idx
-                            );
-                        }
                     }
                 }
                 visit_next.push(MinScored(next_score, next));
@@ -242,10 +233,6 @@ impl TflGraph {
             visited.visit(node_idx);
         }
         println!("compiling scores");
-        println!(
-            "Starting score parent is some: {:#?}",
-            parents.get(&start_idx)
-        );
         scores
             .into_iter()
             .take(50)

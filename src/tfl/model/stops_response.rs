@@ -1,6 +1,10 @@
+use geo::Point;
 use serde::{Deserialize, Serialize};
 
-use crate::db::mongo_doc::MongoDoc;
+use crate::{
+    db::mongo_doc::MongoDoc,
+    graph::{location::Location, station::Station},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -43,6 +47,16 @@ impl MongoDoc for StopPoint {
 
     fn id(&self) -> String {
         self.id.clone()
+    }
+}
+
+impl From<&StopPoint> for Station {
+    fn from(val: &StopPoint) -> Self {
+        Station {
+            id: val.id.clone(),
+            location: Location(Point::new(val.lat, val.lon)),
+            name: val.common_name.clone(),
+        }
     }
 }
 

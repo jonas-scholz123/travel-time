@@ -154,9 +154,7 @@ impl<'a, C: Client> Loader<'a, C> {
         .await;
 
         for result in results {
-            if result.is_err() {
-                return result;
-            }
+            result?
         }
 
         Ok(())

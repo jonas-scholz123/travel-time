@@ -1,10 +1,10 @@
 use chrono::NaiveTime;
 use serde::{Deserialize, Serialize};
 
-use crate::tfl::model::direct_connection::DirectConnection;
+use crate::{db::mongo_doc::MongoDoc, tfl::model::direct_connection::DirectConnection};
 use serde_big_array::BigArray;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Connection {
     pub duration_minutes: u16,
     // An array where the index is the minute of the day

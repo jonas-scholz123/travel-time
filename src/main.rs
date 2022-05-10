@@ -1,15 +1,14 @@
 use anyhow::Result;
 use chrono::NaiveTime;
-use db::mongo_loader::Loader;
+use db::tfl_loader::Loader;
 use graph::tfl_graph::TflGraph;
 use mongodb::options::ClientOptions;
-use tfl::{client::TFLClient, model::stops_response::StopPoint};
+use tfl::client::TFLClient;
 use tokio::time::Instant;
 
 use crate::{
-    db::{data_fixer::DataFixer, mongo_repo::MongoRepository},
+    db::{data_fixer::DataFixer, graph_loader::GraphLoader},
     national_rail::{s3::NationalRailS3, timetable_loader::TimetableLoader},
-    tfl::model::direct_connection::DirectConnection,
 };
 
 mod db;
@@ -29,6 +28,9 @@ async fn main() {
         fix_stoppoints: false,
         load_national_rail_data: false,
         load_national_rail: false,
+        load_graph_data: true,
+        build_graph: false,
+        cache: false,
     });
 
     let printstr = match result.await {
@@ -36,38 +38,6 @@ async fn main() {
         Err(e) => e.to_string(),
     };
     println!("{}", printstr);
-}
-
-async fn build_graph() -> Result<()> {
-    println!("Building graph");
-    let graph = build_graph_from_scratch().await?;
-
-    println!("Computing dijkstra's algorithm.");
-    let now = Instant::now();
-    let _scores = graph.time_dependent_dijkstra("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
-    println!("Time for dijkstra's: {}ms", now.elapsed().as_millis());
-    //println!("{:#?}", scores);
-    Ok(())
-}
-
-async fn build_graph_from_scratch() -> Result<TflGraph> {
-    let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
-    client_options.app_name = Some("TravelTime".to_string());
-    let mongo_client = mongodb::Client::with_options(client_options)?;
-    let connection_repo = MongoRepository::<DirectConnection>::new(&mongo_client);
-    let station_repo = MongoRepository::<StopPoint>::new(&mongo_client);
-    let mut graph = TflGraph::new();
-    let now = Instant::now();
-    println!("Loading graph data and creating nodes/edges");
-    graph
-        .build_from_repos(&connection_repo, &station_repo)
-        .await?;
-    println!("Done. Time elapsed: {}ms", now.elapsed().as_millis());
-    let now = Instant::now();
-    println!("Adding walking edges");
-    graph.add_walking_edges();
-    println!("Done. Time elapsed: {}ms", now.elapsed().as_millis());
-    Ok(graph)
 }
 
 struct LoadOptions {
@@ -79,6 +49,9 @@ struct LoadOptions {
     fix_stoppoints: bool,
     load_national_rail_data: bool,
     load_national_rail: bool,
+    load_graph_data: bool,
+    build_graph: bool,
+    cache: bool,
 }
 
 async fn load(options: LoadOptions) -> Result<()> {
@@ -142,7 +115,35 @@ async fn load(options: LoadOptions) -> Result<()> {
         println!("Loaded timetables.");
     }
 
-    let _result = build_graph().await?;
+    if options.load_graph_data {
+        println!("Loading graph data.");
+        GraphLoader::load_graph_data(&mongo_client).await?;
+        println!("Loaded graph data.");
+    }
+
+    if options.build_graph {
+        println!("Building graph");
+        let path = "./cache/graph.json";
+        let graph = match options.cache {
+            true => match TflGraph::from_cache(path).await {
+                Ok(graph) => graph,
+                Err(e) => {
+                    println!("Error while reading from cache, falling back: {}", e);
+                    let g = TflGraph::new(mongo_client).await?;
+                    g.cache(path).await?;
+                    g
+                }
+            },
+            false => TflGraph::new(mongo_client).await?,
+        };
+
+        println!("Computing dijkstra's algorithm.");
+        let now = Instant::now();
+        let _scores =
+            graph.time_dependent_dijkstra("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
+        println!("Time for dijkstra's: {}ms", now.elapsed().as_millis());
+        //println!("{:#?}", scores);
+    }
 
     Ok(())
 }
