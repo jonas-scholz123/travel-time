@@ -17,14 +17,13 @@ async-trait = "0.1.53"
 futures = "0.3.21"
 anyhow = "1.0.57"
 tokio = { version = "1", features = ["full"] }
-derivative = "2.2.0"
 mongodb = "2.2.1"
 petgraph = { version = "0.6.0", features = ["serde-1"] }
 geo = { version = "0.20.1", features = ["use-serde"] }
 ball-tree = "0.3.0"
-serde-big-array = "0.4.1"
 rusoto_s3 = "0.48.0"
 rusoto_core = "0.48.0"
 quick-xml = { version = "0.22", features = [ "serialize" ] }
 flamegraph = "0.6.1"
 firestorm = { version="0.4", features=["enable_system_time"] }
+rocket = "0.5.0-rc.2"

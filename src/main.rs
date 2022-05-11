@@ -7,10 +7,11 @@ use tfl::client::TFLClient;
 use tokio::time::Instant;
 
 use crate::{
-    db::{data_fixer::DataFixer, graph_loader::GraphLoader},
+    db::data_fixer::DataFixer,
     national_rail::{s3::NationalRailS3, timetable_loader::TimetableLoader},
 };
 
+mod api;
 mod db;
 pub mod graph;
 pub mod national_rail;
@@ -28,9 +29,7 @@ async fn main() {
         fix_stoppoints: false,
         load_national_rail_data: false,
         load_national_rail: false,
-        load_graph_data: true,
-        build_graph: false,
-        cache: false,
+        build_graph: true,
     });
 
     let printstr = match result.await {
@@ -49,9 +48,7 @@ struct LoadOptions {
     fix_stoppoints: bool,
     load_national_rail_data: bool,
     load_national_rail: bool,
-    load_graph_data: bool,
     build_graph: bool,
-    cache: bool,
 }
 
 async fn load(options: LoadOptions) -> Result<()> {
@@ -115,27 +112,11 @@ async fn load(options: LoadOptions) -> Result<()> {
         println!("Loaded timetables.");
     }
 
-    if options.load_graph_data {
-        println!("Loading graph data.");
-        GraphLoader::load_graph_data(&mongo_client).await?;
-        println!("Loaded graph data.");
-    }
-
     if options.build_graph {
         println!("Building graph");
-        let path = "./cache/graph.json";
-        let graph = match options.cache {
-            true => match TflGraph::from_cache(path).await {
-                Ok(graph) => graph,
-                Err(e) => {
-                    println!("Error while reading from cache, falling back: {}", e);
-                    let g = TflGraph::new(mongo_client).await?;
-                    g.cache(path).await?;
-                    g
-                }
-            },
-            false => TflGraph::new(mongo_client).await?,
-        };
+        let now = Instant::now();
+        let graph = TflGraph::new(mongo_client).await?;
+        println!("Done building graph in {}ms", now.elapsed().as_millis());
 
         println!("Computing dijkstra's algorithm.");
         let now = Instant::now();

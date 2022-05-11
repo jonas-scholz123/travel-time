@@ -1,16 +1,13 @@
-use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 
 use crate::{tfl::endpoint::Endpoint, utils};
 
 use super::stops_response::{StopsResponse, TransportMode};
 
-#[derive(Derivative, Serialize, Deserialize)]
-#[derivative(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct StopsByModeRequest {
     #[serde(skip)]
     modes: Vec<TransportMode>,
-    #[derivative(Default(value = "1"))]
     pub page: usize,
 }
 
@@ -37,7 +34,7 @@ impl StopsByModeRequest {
     pub fn new<T: Into<Vec<TransportMode>>>(stop_point_modes: T) -> Self {
         Self {
             modes: stop_point_modes.into(),
-            ..Self::default()
+            page: 1,
         }
     }
 }

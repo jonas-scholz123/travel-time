@@ -1,12 +1,10 @@
-use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 
 use crate::{tfl::endpoint::Endpoint, utils};
 
 use super::{line_response::LinesResult, stops_response::TransportMode};
 
-#[derive(Derivative, Serialize, Deserialize)]
-#[derivative(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct LinesByModeRequest {
     #[serde(skip)]
     modes: Vec<TransportMode>,

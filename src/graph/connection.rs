@@ -1,17 +1,20 @@
 use chrono::NaiveTime;
-use serde::{Deserialize, Serialize};
 
-use crate::{db::mongo_doc::MongoDoc, tfl::model::direct_connection::DirectConnection};
-use serde_big_array::BigArray;
+use crate::tfl::model::direct_connection::DirectConnection;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct Connection {
     pub duration_minutes: u16,
     // An array where the index is the minute of the day
     // and the value is the number of minutes until the
     // next train arrives.
-    #[serde(with = "BigArray")]
-    pub departure_times: [u16; 24 * 60],
+    pub departure_times: DepartureTime,
+}
+
+#[derive(Debug, Clone)]
+pub enum DepartureTime {
+    Instantaneous,
+    Timetable(Box<[u16; 24 * 60]>),
 }
 
 impl Connection {
@@ -43,19 +46,22 @@ impl Connection {
 
         Self {
             duration_minutes: con.duration_minutes as u16,
-            departure_times: departure_times_arr,
+            departure_times: DepartureTime::Timetable(Box::new(departure_times_arr)),
         }
     }
 
     pub fn get_minutes_to_departure(&self, minutes_since_midnight: usize) -> u16 {
-        self.departure_times[minutes_since_midnight]
+        match &self.departure_times {
+            DepartureTime::Instantaneous => 0,
+            DepartureTime::Timetable(arr) => arr[minutes_since_midnight],
+        }
     }
 
     pub fn from_dist(dist: f64) -> Self {
         Self {
             // 200m per minute.
             duration_minutes: (dist / 80.) as u16,
-            departure_times: [0; 24 * 60],
+            departure_times: DepartureTime::Instantaneous,
         }
     }
 }

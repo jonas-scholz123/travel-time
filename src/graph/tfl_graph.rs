@@ -1,7 +1,6 @@
 use std::{
     collections::hash_map::Entry::{Occupied, Vacant},
     collections::{BinaryHeap, HashMap, HashSet},
-    fs,
 };
 
 use crate::{
@@ -15,19 +14,13 @@ use futures::{stream, StreamExt, TryStreamExt};
 use mongodb::Client;
 use petgraph::{
     graph::{EdgeReference, NodeIndex},
-    visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences, NodeRef, VisitMap, Visitable},
+    visit::{EdgeRef, IntoNodeReferences, VisitMap, Visitable},
     Graph,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use tokio::time::Instant;
 
-use super::{
-    connection::Connection, min_scored::MinScored, node_pair::NodePair, path::Path,
-    station::Station,
-};
+use super::{connection::Connection, min_scored::MinScored, path::Path, station::Station};
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct TflGraph {
     graph: Graph<Station, Connection>,
     station_id_to_node: HashMap<String, NodeIndex>,
@@ -51,7 +44,6 @@ impl TflGraph {
         connection_repo: &MongoRepository<DirectConnection>,
         stop_repo: &MongoRepository<StopPoint>,
     ) -> Result<()> {
-        let now = Instant::now();
         let cursor = connection_repo.get_all().await?;
         let edges = cursor.try_collect::<Vec<_>>().await?;
 
@@ -122,45 +114,6 @@ impl TflGraph {
         for (idx, close_idx, con) in walking_connections {
             self.graph.add_edge(idx, close_idx, con);
         }
-    }
-
-    pub async fn from_cache<S: Into<String>>(path: S) -> Result<Self> {
-        //let graph = fs::read_to_string("/etc/hosts").expect("Unable to read file");
-        let now = Instant::now();
-        let self_string = fs::read_to_string(path.into())?;
-        println!("File reading: {}ms", now.elapsed().as_millis());
-        let now = Instant::now();
-        let ret = Ok(serde_json::from_str(&self_string)?);
-        println!("Deserialisation: {}ms", now.elapsed().as_millis());
-        ret
-    }
-
-    pub async fn cache<S: Into<String>>(&self, path: S) -> Result<()> {
-        let graph_string = json!(self).to_string();
-        fs::write(path.into(), graph_string)?;
-        Ok(())
-    }
-
-    pub async fn cache2(&self, client: &Client) -> Result<()> {
-        let repo: MongoRepository<NodePair> = MongoRepository::new(client);
-        let node_pairs: Vec<_> = self
-            .graph
-            .edge_references()
-            .into_iter()
-            .map(|e| {
-                let from = self.graph.node_weight(e.source()).unwrap();
-                let to = self.graph.node_weight(e.source()).unwrap();
-                let edge = e.weight();
-                NodePair {
-                    from: from.clone(),
-                    to: to.clone(),
-                    edge: edge.clone(),
-                }
-            })
-            .collect();
-        repo.collection.insert_many(node_pairs, None).await?;
-
-        Ok(())
     }
 
     fn get_or_insert_node_idx(
