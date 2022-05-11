@@ -11,7 +11,7 @@ use anyhow::Result;
 use ball_tree::BallTree;
 use chrono::NaiveTime;
 use futures::{stream, StreamExt, TryStreamExt};
-use mongodb::Client;
+use mongodb::{bson::doc, Client};
 use petgraph::{
     graph::{EdgeReference, NodeIndex},
     visit::{EdgeRef, IntoNodeReferences, VisitMap, Visitable},
@@ -39,6 +39,16 @@ impl TflGraph {
         Ok(result)
     }
 
+    async fn get_stop_point_map(stop_ids: HashSet<String>, stop_repo: MongoRepository<StopPoint>) {
+        let stop_point_map = stream::iter(stop_ids)
+            .map(|id| stop_repo.get_by_id(id))
+            .buffer_unordered(30)
+            .map(|stop| stop.unwrap().unwrap())
+            .map(|stop| (stop.id.clone(), stop))
+            .collect::<HashMap<_, _>>()
+            .await;
+    }
+
     async fn add_stations(
         &mut self,
         connection_repo: &MongoRepository<DirectConnection>,
@@ -53,14 +63,28 @@ impl TflGraph {
             stop_ids.insert(&e.destination);
         });
 
-        let stop_point_map = stream::iter(stop_ids)
-            .map(|stop_id| stop_repo.get_by_id(stop_id))
-            .buffer_unordered(30)
-            //.try_collect::<Vec<_>>()
-            .map(|stop| stop.unwrap().unwrap())
-            .map(|stop| (stop.id.clone(), stop))
-            .collect::<HashMap<_, _>>()
-            .await;
+        // There is a bug in the compiler that breaks things
+        // when working with Rocket. Have to use the much slower
+        // version unfortunately.
+
+        //let stop_point_map = stream::iter(stop_ids)
+        //    .map(|id| stop_repo.get_by_id(id))
+        //    .buffer_unordered(30)
+        //    .map(|stop| stop.unwrap().unwrap())
+        //    .map(|stop| (stop.id.clone(), stop))
+        //    .collect::<HashMap<_, _>>()
+        //    .await;
+
+        let stop_ids_vec = stop_ids.iter().collect::<Vec<_>>();
+        let filter = doc! {"_id": {"$in": stop_ids_vec}};
+        let cursor = stop_repo.collection.find(filter, None).await?;
+
+        let stop_points = cursor.try_collect::<Vec<_>>().await?;
+
+        let stop_point_map = stop_points
+            .iter()
+            .map(|s| (s.id.clone(), s))
+            .collect::<HashMap<_, _>>();
 
         //while let Some(edge) = cursor.try_next().await? {
         for edge in edges {

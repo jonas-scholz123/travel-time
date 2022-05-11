@@ -44,6 +44,8 @@ impl DirectConnection {
             }
             None => {
                 self.set_id();
+                self.departure_times.sort();
+                self.departure_times.dedup();
                 repo.insert(self).await?
             }
         };

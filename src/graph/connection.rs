@@ -25,7 +25,6 @@ impl Connection {
         // Depart times are pre-sorted in Mongo.
         for depart_time in &con.departure_times {
             let end = (*depart_time - midnight).num_minutes() as usize;
-
             let mut mins_until_depart = end - start;
             departure_times_arr
                 .iter_mut()
