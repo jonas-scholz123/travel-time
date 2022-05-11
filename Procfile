@@ -1,0 +1,1 @@
+web: ./target/release/travel_time
