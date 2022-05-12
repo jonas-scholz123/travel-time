@@ -10,7 +10,7 @@ use crate::{
 use anyhow::Result;
 use ball_tree::BallTree;
 use chrono::NaiveTime;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::TryStreamExt;
 use mongodb::{bson::doc, Client};
 use petgraph::{
     graph::{EdgeReference, NodeIndex},
@@ -37,16 +37,6 @@ impl TflGraph {
             .await?;
         result.add_walking_edges();
         Ok(result)
-    }
-
-    async fn get_stop_point_map(stop_ids: HashSet<String>, stop_repo: MongoRepository<StopPoint>) {
-        let stop_point_map = stream::iter(stop_ids)
-            .map(|id| stop_repo.get_by_id(id))
-            .buffer_unordered(30)
-            .map(|stop| stop.unwrap().unwrap())
-            .map(|stop| (stop.id.clone(), stop))
-            .collect::<HashMap<_, _>>()
-            .await;
     }
 
     async fn add_stations(

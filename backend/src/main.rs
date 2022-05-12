@@ -2,6 +2,7 @@ use std::env;
 
 use anyhow::Result;
 use chrono::NaiveTime;
+use clap::Parser;
 use db::tfl_loader::Loader;
 use graph::tfl_graph::TflGraph;
 use mongodb::options::ClientOptions;
@@ -15,7 +16,6 @@ use crate::{
     national_rail::{s3::NationalRailS3, timetable_loader::TimetableLoader},
 };
 
-mod api;
 mod db;
 pub mod graph;
 pub mod national_rail;
@@ -37,88 +37,94 @@ fn get_travel_time(stop_id: String, time_str: String, graph: &State<TflGraph>) -
     Json(results)
 }
 
-#[launch]
-async fn rocket() -> _ {
+//#[launch]
+async fn rocket() -> Result<()> {
     let port = env::var("PORT")
         .unwrap_or_else(|_| "5000".to_string())
-        .parse::<usize>()
-        .unwrap();
+        .parse::<usize>()?;
+
     println!("PORT: {:#?}", port);
 
     let atlas_uri = env::var("MONGO_URI").unwrap();
-    let mut atlas_opts = ClientOptions::parse(atlas_uri).await.unwrap();
+    let mut atlas_opts = ClientOptions::parse(atlas_uri).await?;
     atlas_opts.app_name = Some("travel-time".to_string());
-    let atlas_client = mongodb::Client::with_options(atlas_opts).unwrap();
+    let atlas_client = mongodb::Client::with_options(atlas_opts)?;
 
     println!("Building graph");
     let now = Instant::now();
-    let graph = TflGraph::new(atlas_client).await.unwrap();
+    let graph = TflGraph::new(atlas_client).await?;
     println!("Done building graph in {}ms", now.elapsed().as_millis());
 
     let config = rocket::Config::figment().merge(("port", port));
 
-    rocket::custom(config)
+    let _rocket = rocket::custom(config)
         .mount("/", routes![get_travel_time])
         .manage(graph)
+        .ignite()
+        .await?
+        .launch()
+        .await?;
+
+    Ok(())
 }
 
-//#[tokio::main]
-//async fn main() {
-//    let result = load(LoadOptions {
-//        load_routes: false,
-//        load_stops: false,
-//        load_segments: false,
-//        load_timetables: false,
-//        fix_timetables: false,
-//        fix_stoppoints: false,
-//        load_national_rail_data: false,
-//        load_national_rail: false,
-//        copy_to_atlas: true,
-//        build_graph: true,
-//    });
-//
-//    let printstr = match result.await {
-//        Ok(_) => "Load completed successfully.".into(),
-//        Err(e) => e.to_string(),
-//    };
-//    println!("{}", printstr);
-//}
-
-async fn setup() {
-    let result = load(LoadOptions {
-        load_routes: false,
-        load_stops: false,
-        load_segments: false,
-        load_timetables: false,
-        fix_timetables: false,
-        fix_stoppoints: false,
-        load_national_rail_data: false,
-        load_national_rail: false,
-        copy_to_atlas: false,
-        build_graph: false,
-    });
-
+#[tokio::main]
+async fn main() {
+    let options = Args::parse();
+    let result = load(options);
     let printstr = match result.await {
-        Ok(_) => "Load completed successfully.".into(),
+        Ok(_) => "Setup completed successfully.".into(),
         Err(e) => e.to_string(),
     };
     println!("{}", printstr);
+
+    match rocket().await {
+        Ok(_) => println!("Terminated Successfully."),
+        Err(e) => println!("{}", e),
+    };
 }
 
-struct LoadOptions {
-    load_stops: bool,
-    load_routes: bool,
-    load_segments: bool,
-    load_timetables: bool,
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    // Should stop points be loaded from the TFL api?
+    #[clap(short, long)]
+    stoppoint_load: bool,
+    // Should routes be loaded from the TFL api?
+    #[clap(short, long)]
+    routes_load: bool,
+    // Should route segments (i.e. between individual stops)
+    // be loaded from the TFL api?
+    #[clap(short, long)]
+    segment_load: bool,
+    // Should timetables (departure times) be loaded from the TFL api?
+    #[clap(short, long)]
+    timetable_load: bool,
+    // Should existing timetable data in Mongo be fixed?
+    // This involves sorting the departure times.
+    #[clap(long)]
     fix_timetables: bool,
+    // Should existing stop point data in Mongo be fixed?
+    // This involves adding a (guessed) TIPLOC ID to every entry.
+    #[clap(long)]
     fix_stoppoints: bool,
+    // Should we download the zip file containing national rail
+    // timetables from S3?
+    #[clap(long)]
     load_national_rail_data: bool,
+    // Should national rail timetable data be inserted into Mongo?
+    #[clap(short, long)]
     load_national_rail: bool,
+    // Should the TFLGraph be constructed locally?
+    #[clap(long)]
     build_graph: bool,
+    // Should data be copied from the local MongoDB to
+    // the hosted one?
+    #[clap(short, long)]
     copy_to_atlas: bool,
 }
 
-async fn load(options: LoadOptions) -> Result<()> {
+async fn load(options: Args) -> Result<()> {
     let mut tfl_client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
     // Parse a connection string into an options struct.
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
@@ -130,25 +136,25 @@ async fn load(options: LoadOptions) -> Result<()> {
 
     let mut loader = Loader::new(&mut tfl_client, &mongo_client);
 
-    if options.load_stops {
+    if options.stoppoint_load {
         println!("Loading stops.");
         loader.load_stops().await?;
         println!("Loaded stops.");
     }
 
-    if options.load_routes {
+    if options.routes_load {
         println!("Loading routes.");
         loader.load_routes().await?;
         println!("Loaded routes.");
     }
 
-    if options.load_segments {
+    if options.segment_load {
         println!("Loading segments.");
         loader.load_segments().await?;
         println!("Loaded segments.");
     }
 
-    if options.load_timetables {
+    if options.timetable_load {
         println!("Loading timetables.");
         loader.load_timetables().await?;
         println!("Loaded timetables.");

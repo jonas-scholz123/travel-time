@@ -3,4 +3,3 @@ pub mod endpoint;
 pub mod errors;
 pub mod model;
 pub mod param_value;
-pub mod query_parameters;

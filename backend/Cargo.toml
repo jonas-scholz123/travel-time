@@ -27,3 +27,4 @@ quick-xml = { version = "0.22", features = [ "serialize" ] }
 flamegraph = "0.6.1"
 firestorm = { version="0.4", features=["enable_system_time"] }
 rocket = { version="0.5.0-rc.2", features=["json"] }
+clap = { version = "3.1.18", features = ["derive"] }

@@ -1,5 +1,4 @@
 pub mod direct_connection;
-pub mod journey_request;
 pub mod journey_response;
 pub mod line_request;
 pub mod line_response;
