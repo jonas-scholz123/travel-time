@@ -4,7 +4,7 @@ use mongodb::Client;
 
 use crate::tfl::model::{direct_connection::DirectConnection, stops_response::StopPoint};
 
-use super::{mongo_doc::MongoDoc, mongo_repo::MongoRepository};
+use super::mongo_repo::MongoRepository;
 
 pub async fn copy_collections(from_client: &Client, to_client: &Client) -> Result<()> {
     let from: MongoRepository<DirectConnection> = MongoRepository::new(from_client);

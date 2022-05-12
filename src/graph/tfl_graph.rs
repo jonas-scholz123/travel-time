@@ -158,11 +158,7 @@ impl TflGraph {
         }
     }
 
-    pub fn time_dependent_dijkstra(
-        &self,
-        start: String,
-        start_time: NaiveTime,
-    ) -> Vec<Path<Station>> {
+    pub fn time_dependent_dijkstra(&self, start: String, start_time: NaiveTime) -> Vec<Path> {
         let mut visited = self.graph.visit_map();
         let mut scores = HashMap::new();
         let mut parents: HashMap<NodeIndex, NodeIndex> = HashMap::new();
@@ -209,17 +205,16 @@ impl TflGraph {
             }
             visited.visit(node_idx);
         }
-        println!("compiling scores");
         scores
             .into_iter()
-            .take(50)
-            .map(|(n_idx, score)| Path::<Station> {
-                score: score - start_score,
-                val: self.graph.node_weight(n_idx).unwrap().clone(),
-                path: TflGraph::get_path(&parents, n_idx)
-                    .iter()
-                    .map(|idx| self.graph.node_weight(*idx).unwrap())
-                    .collect(),
+            .map(|(n_idx, score)| Path {
+                minutes: score - start_score,
+                destination: self.graph.node_weight(n_idx).unwrap().clone(),
+                //path: TflGraph::get_path(&parents, n_idx)
+                //    .iter()
+                //    .map(|idx| self.graph.node_weight(*idx).unwrap().clone())
+                //    .collect(),
+                path: None,
             })
             .collect()
     }

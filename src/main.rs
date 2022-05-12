@@ -5,12 +5,13 @@ use chrono::NaiveTime;
 use db::tfl_loader::Loader;
 use graph::tfl_graph::TflGraph;
 use mongodb::options::ClientOptions;
-use rocket::State;
+use rocket::{serde::json::Json, State};
 use tfl::client::TFLClient;
 use tokio::time::Instant;
 
 use crate::{
     db::{atlas_loader::copy_collections, data_fixer::DataFixer},
+    graph::path::Path,
     national_rail::{s3::NationalRailS3, timetable_loader::TimetableLoader},
 };
 
@@ -25,38 +26,31 @@ pub mod utils;
 extern crate rocket;
 
 #[get("/traveltime/<stop_id>/<time_str>")]
-async fn get_travel_time(stop_id: String, time_str: String) -> String {
-    //let atlas_uri = env::var("MONGO_URI").unwrap();
-    let mut atlas_opts = ClientOptions::parse("mongodb://localhost:27017")
-        .await
-        .unwrap();
-    atlas_opts.app_name = Some("travel-time".to_string());
-    let atlas_client = mongodb::Client::with_options(atlas_opts).unwrap();
-
-    let graph = TflGraph::new(atlas_client).await.unwrap();
-    let time = NaiveTime::from_hms(10, 0, 0);
+fn get_travel_time(stop_id: String, time_str: String, graph: &State<TflGraph>) -> Json<Vec<Path>> {
+    let now = Instant::now();
+    let time = NaiveTime::parse_from_str(&time_str, "%H:%M").unwrap();
     let results = graph.time_dependent_dijkstra(stop_id, time);
-    format!("{:#?}", results)
-}
-
-#[get("/")]
-fn index() -> String {
-    format!("Hi")
+    println!(
+        "travel time request completed in {}ms",
+        now.elapsed().as_millis()
+    );
+    Json(results)
 }
 
 #[launch]
 async fn rocket() -> _ {
     let atlas_uri = env::var("MONGO_URI").unwrap();
-    let mut atlas_opts = ClientOptions::parse("mongodb://localhost:27017")
-        .await
-        .unwrap();
+    let mut atlas_opts = ClientOptions::parse(atlas_uri).await.unwrap();
     atlas_opts.app_name = Some("travel-time".to_string());
     let atlas_client = mongodb::Client::with_options(atlas_opts).unwrap();
 
+    println!("Building graph");
+    let now = Instant::now();
     let graph = TflGraph::new(atlas_client).await.unwrap();
+    println!("Done building graph in {}ms", now.elapsed().as_millis());
 
     rocket::build()
-        .mount("/", routes![get_travel_time, index])
+        .mount("/", routes![get_travel_time])
         .manage(graph)
 }
 
@@ -81,6 +75,27 @@ async fn rocket() -> _ {
 //    };
 //    println!("{}", printstr);
 //}
+
+async fn setup() {
+    let result = load(LoadOptions {
+        load_routes: false,
+        load_stops: false,
+        load_segments: false,
+        load_timetables: false,
+        fix_timetables: false,
+        fix_stoppoints: false,
+        load_national_rail_data: false,
+        load_national_rail: false,
+        copy_to_atlas: false,
+        build_graph: false,
+    });
+
+    let printstr = match result.await {
+        Ok(_) => "Load completed successfully.".into(),
+        Err(e) => e.to_string(),
+    };
+    println!("{}", printstr);
+}
 
 struct LoadOptions {
     load_stops: bool,
