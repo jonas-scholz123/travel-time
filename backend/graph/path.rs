@@ -6,5 +6,5 @@ use super::station::Station;
 pub struct Path {
     pub minutes: u16,
     pub destination: Station,
-    pub path: Option<Vec<Station>>,
+    pub path: Vec<String>,
 }

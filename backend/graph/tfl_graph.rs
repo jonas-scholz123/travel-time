@@ -200,11 +200,11 @@ impl TflGraph {
             .map(|(n_idx, score)| Path {
                 minutes: score - start_score,
                 destination: self.graph.node_weight(n_idx).unwrap().clone(),
-                //path: TflGraph::get_path(&parents, n_idx)
-                //    .iter()
-                //    .map(|idx| self.graph.node_weight(*idx).unwrap().clone())
-                //    .collect(),
-                path: None,
+                path: TflGraph::get_path(&parents, n_idx)
+                    .iter()
+                    .map(|idx| self.graph.node_weight(*idx).unwrap().id.clone())
+                    .collect(),
+                //path: None,
             })
             .collect()
     }

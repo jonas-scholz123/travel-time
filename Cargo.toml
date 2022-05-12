@@ -2,6 +2,11 @@
 name = "travel_time"
 version = "0.1.0"
 edition = "2021"
+authors = ["Jonas Scholz"]
+
+[[bin]]
+name = "travel_time"
+path = "backend/main.rs"
 
 [profile.release]
 debug = true
