@@ -39,6 +39,12 @@ fn get_travel_time(stop_id: String, time_str: String, graph: &State<TflGraph>) -
 
 #[launch]
 async fn rocket() -> _ {
+    let port = env::var("PORT")
+        .unwrap_or_else(|_| "5000".to_string())
+        .parse::<usize>()
+        .unwrap();
+    println!("PORT: {:#?}", port);
+
     let atlas_uri = env::var("MONGO_URI").unwrap();
     let mut atlas_opts = ClientOptions::parse(atlas_uri).await.unwrap();
     atlas_opts.app_name = Some("travel-time".to_string());
@@ -49,7 +55,9 @@ async fn rocket() -> _ {
     let graph = TflGraph::new(atlas_client).await.unwrap();
     println!("Done building graph in {}ms", now.elapsed().as_millis());
 
-    rocket::build()
+    let config = rocket::Config::figment().merge(("port", port));
+
+    rocket::custom(config)
         .mount("/", routes![get_travel_time])
         .manage(graph)
 }
