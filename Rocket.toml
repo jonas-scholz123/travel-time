@@ -3,4 +3,4 @@ address = "0.0.0.0"
 limits = { form = "64 kB", json = "1 MiB" }
 
 [debug]
-address = "127..0.1"
+address = "127.0.0.1"
