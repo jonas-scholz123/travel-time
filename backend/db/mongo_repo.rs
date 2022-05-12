@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use anyhow::Result;
 use mongodb::{
     bson::doc,
@@ -37,15 +35,6 @@ where
         self.collection
             .insert_one(doc, InsertOneOptions::default())
             .await?;
-        Ok(())
-    }
-
-    pub async fn insert_many<I, B>(&self, docs: I) -> Result<()>
-    where
-        I: IntoIterator<Item = B>,
-        B: Borrow<T>,
-    {
-        self.collection.insert_many(docs, None).await?;
         Ok(())
     }
 
