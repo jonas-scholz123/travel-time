@@ -2,7 +2,6 @@ use std::{env, time::Instant};
 
 use anyhow::Result;
 use chrono::NaiveTime;
-use geo::Point;
 use mongodb::options::ClientOptions;
 use rocket::{get, routes, serde::json::Json, State};
 use tokio::sync::RwLock;
@@ -19,7 +18,7 @@ pub async fn get_travel_time(
 
     let start_time = NaiveTime::parse_from_str(&time_str, "%H:%M").unwrap();
 
-    if let Some(coords) = try_parse_loc(&loc_string) {
+    if let Some(coords) = Location::try_parse_loc(&loc_string) {
         return Json(graph.blocking_write().tt_from_location(coords, start_time));
     }
 
@@ -37,21 +36,6 @@ pub async fn get_travel_time(
     Json(results)
 }
 
-fn try_parse_loc(loc_string: &str) -> Option<Location> {
-    let split_loc: Vec<_> = loc_string.split(',').collect();
-    if split_loc.len() == 2 {
-        let x = split_loc.first().unwrap().parse::<f64>();
-        let y = split_loc.last().unwrap().parse::<f64>();
-
-        match (x, y) {
-            (Ok(x), Ok(y)) => Some(Location(Point::new(x, y))),
-            _ => None,
-        };
-    }
-
-    None
-}
-
 pub async fn rocket() -> Result<()> {
     let port = env::var("PORT")
         .unwrap_or_else(|_| "3001".to_string())
@@ -66,7 +50,7 @@ pub async fn rocket() -> Result<()> {
 
     println!("Building graph");
     let now = Instant::now();
-    let graph = TflGraph::new(atlas_client).await?;
+    let graph = RwLock::new(TflGraph::new(atlas_client).await?);
     println!("Done building graph in {}ms", now.elapsed().as_millis());
 
     let config = rocket::Config::figment().merge(("port", port));

@@ -263,8 +263,6 @@ impl<'a> TflGraph {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use geo::Point;
     use mongodb::options::ClientOptions;
 

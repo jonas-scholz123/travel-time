@@ -36,3 +36,29 @@ impl Point for Location {
         Location(point)
     }
 }
+
+impl Location {
+    pub fn try_parse_loc(loc_string: &str) -> Option<Location> {
+        let split_loc: Vec<_> = loc_string.split(',').collect();
+        if split_loc.len() == 2 {
+            let x = split_loc.first().unwrap().parse::<f64>();
+            let y = split_loc.last().unwrap().parse::<f64>();
+
+            return match (x, y) {
+                (Ok(x), Ok(y)) => Some(Location(geo::Point::new(x, y))),
+                _ => None,
+            };
+        }
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_parse() {
+        assert!(Location::try_parse_loc("51.501105,-0.232320").is_some());
+    }
+}
