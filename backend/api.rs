@@ -19,7 +19,7 @@ pub async fn get_travel_time(
     let start_time = NaiveTime::parse_from_str(&time_str, "%H:%M").unwrap();
 
     if let Some(coords) = Location::try_parse_loc(&loc_string) {
-        return Json(graph.blocking_write().tt_from_location(coords, start_time));
+        return Json(graph.write().await.tt_from_location(coords, start_time));
     }
 
     let results = graph
