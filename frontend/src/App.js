@@ -5,9 +5,10 @@ import 'leaflet/dist/leaflet.css'
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import axios from 'axios';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import L from 'leaflet';
+import useAxiosGet from './utils';
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -33,7 +34,6 @@ function App() {
 
     const map = useMap();
     if (locs.length == 0) {
-      console.log("default bounds:")
       map.fitBounds(startingBounds);
       return null;
     }
@@ -45,8 +45,6 @@ function App() {
     }
 
     map.fitBounds(locs);
-
-    console.log("bounds:", locs);
     return null;
   }
 
