@@ -21,6 +21,7 @@ const startingBounds = [[51.564956, -0.263222], [51.452705, 0.022491]];
 
 function App() {
   const [coordsList, setCoordsList] = useState([])
+  const [data, setData] = useState(null)
 
   const addCoords = (coord) => {
     setCoordsList([...coordsList, coord])
@@ -29,6 +30,15 @@ function App() {
   const deleteCoords = (idx) => {
     setCoordsList(coordsList.filter((_, i) => i !== idx))
   }
+
+  useEffect(() => {
+    if (coordsList.length === 0) {
+      return;
+    }
+    console.log("locs", coordsList[0]);
+    axios.get("https://still-sierra-43714.herokuapp.com/traveltime/" + coordsList[0].join(",") + "/10:00")
+      .then(resp => setData(resp.data))
+  }, [coordsList])
 
   function ChangeView({ locs }) {
 

@@ -1,7 +1,8 @@
 import AddLocation from "./AddLocation";
 import EnteredLocation from "./EnteredLocation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useAxiosGet from "../utils";
+import axios from "axios";
 
 function Card(props) {
 
@@ -16,6 +17,7 @@ function Card(props) {
         setLocations([...locations, location])
         props.addCoords(coords)
     }
+
 
     return (
         <div class="absolute top-3 left-3 bg-white p-3 rounded-lg border border-gray-200 shadow w-96 z-10000">

@@ -3,8 +3,33 @@ use std::{env, time::Instant};
 use anyhow::Result;
 use chrono::NaiveTime;
 use mongodb::options::ClientOptions;
+use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::Header;
 use rocket::{get, routes, serde::json::Json, State};
+use rocket::{Request, Response};
 use tokio::sync::RwLock;
+
+pub struct Cors;
+
+#[rocket::async_trait]
+impl Fairing for Cors {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to responses",
+            kind: Kind::Response,
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "POST, GET, PATCH, OPTIONS",
+        ));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
 
 use crate::graph::{location::Location, path::Path, tfl_graph::TflGraph};
 
@@ -58,6 +83,7 @@ pub async fn rocket() -> Result<()> {
     let _rocket = rocket::custom(config)
         .mount("/", routes![get_travel_time])
         .manage(graph)
+        .attach(Cors)
         .ignite()
         .await?
         .launch()
