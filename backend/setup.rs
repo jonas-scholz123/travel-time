@@ -91,8 +91,7 @@ pub async fn load(options: SetupArgs) -> Result<()> {
 
         println!("Computing dijkstra's algorithm.");
         let now = Instant::now();
-        let _scores =
-            graph.time_dependent_dijkstra("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
+        let _scores = graph.tt_from_stop_id("490004733C".into(), NaiveTime::from_hms(10, 0, 0));
         println!("Time for dijkstra's: {}ms", now.elapsed().as_millis());
         //println!("{:#?}", scores);
     }

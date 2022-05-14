@@ -2,30 +2,59 @@ use std::{env, time::Instant};
 
 use anyhow::Result;
 use chrono::NaiveTime;
+use geo::Point;
 use mongodb::options::ClientOptions;
 use rocket::{get, routes, serde::json::Json, State};
+use tokio::sync::RwLock;
 
-use crate::graph::{path::Path, tfl_graph::TflGraph};
+use crate::graph::{location::Location, path::Path, tfl_graph::TflGraph};
 
-#[get("/traveltime/<stop_id>/<time_str>")]
-pub fn get_travel_time(
-    stop_id: String,
+#[get("/traveltime/<loc_string>/<time_str>")]
+pub async fn get_travel_time(
+    loc_string: String,
     time_str: String,
-    graph: &State<TflGraph>,
+    graph: &State<RwLock<TflGraph>>,
 ) -> Json<Vec<Path>> {
     let now = Instant::now();
-    let time = NaiveTime::parse_from_str(&time_str, "%H:%M").unwrap();
-    let results = graph.time_dependent_dijkstra(stop_id, time);
+
+    let start_time = NaiveTime::parse_from_str(&time_str, "%H:%M").unwrap();
+
+    if let Some(coords) = try_parse_loc(&loc_string) {
+        return Json(graph.blocking_write().tt_from_location(coords, start_time));
+    }
+
+    let results = graph
+        .read()
+        .await
+        .tt_from_stop_id(loc_string, start_time)
+        .unwrap();
+
     println!(
         "travel time request completed in {}ms",
         now.elapsed().as_millis()
     );
+
     Json(results)
+}
+
+fn try_parse_loc(loc_string: &str) -> Option<Location> {
+    let split_loc: Vec<_> = loc_string.split(',').collect();
+    if split_loc.len() == 2 {
+        let x = split_loc.first().unwrap().parse::<f64>();
+        let y = split_loc.last().unwrap().parse::<f64>();
+
+        match (x, y) {
+            (Ok(x), Ok(y)) => Some(Location(Point::new(x, y))),
+            _ => None,
+        };
+    }
+
+    None
 }
 
 pub async fn rocket() -> Result<()> {
     let port = env::var("PORT")
-        .unwrap_or_else(|_| "3000".to_string())
+        .unwrap_or_else(|_| "3001".to_string())
         .parse::<usize>()?;
 
     println!("PORT: {:#?}", port);

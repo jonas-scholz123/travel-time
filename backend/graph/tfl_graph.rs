@@ -7,7 +7,7 @@ use crate::{
     db::mongo_repo::MongoRepository,
     tfl::model::{direct_connection::DirectConnection, stops_response::StopPoint},
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use ball_tree::BallTree;
 use chrono::NaiveTime;
 use futures::TryStreamExt;
@@ -18,16 +18,19 @@ use petgraph::{
     Graph,
 };
 
-use super::{connection::Connection, min_scored::MinScored, path::Path, station::Station};
+use super::{
+    connection::Connection, location::Location, min_scored::MinScored, path::Path, station::Station,
+};
 
 #[derive(Default)]
 pub struct TflGraph {
     graph: Graph<Station, Connection>,
+    ball_tree: Option<BallTree<Location, Station>>,
     station_id_to_node: HashMap<String, NodeIndex>,
 }
 
-impl TflGraph {
-    pub async fn new(mongo_client: Client) -> Result<Self> {
+impl<'a> TflGraph {
+    pub async fn new(mongo_client: Client) -> Result<TflGraph> {
         let mut result = Self::default();
         result
             .add_stations(
@@ -99,30 +102,39 @@ impl TflGraph {
         Ok(())
     }
 
+    fn get_walking_connections(
+        &self,
+        station: &Station,
+        station_idx: NodeIndex,
+    ) -> Vec<(NodeIndex, NodeIndex, Connection)> {
+        self.ball_tree
+            .as_ref()
+            .unwrap()
+            .query()
+            .nn_within(&station.location, 1000.)
+            .map(|(_, dist, close_station)| {
+                let close_idx = self.station_id_to_node.get(&close_station.id).unwrap();
+                (station_idx, *close_idx, Connection::from_dist(dist))
+            })
+            .filter(|(idx1, idx2, _)| idx1 != idx2)
+            .collect::<Vec<_>>()
+    }
+
     pub fn add_walking_edges(&mut self) {
         let locations: Vec<_> = self
             .graph
             .node_weights()
             .map(|n| n.location.clone())
             .collect();
-        let nodes: Vec<_> = self.graph.node_weights().collect();
 
-        let ball_tree = BallTree::new(locations, nodes);
+        let nodes: Vec<_> = self.graph.node_weights().cloned().collect();
+
+        self.ball_tree = Some(BallTree::new(locations, nodes));
         //let q = Query::nn_within(&mut self, point, max_radius)
         let walking_connections = self
             .graph
             .node_references()
-            .flat_map(|(idx, station)| {
-                ball_tree
-                    .query()
-                    .nn_within(&station.location, 1000.)
-                    .map(|(_, dist, &close_station)| {
-                        let close_idx = self.station_id_to_node.get(&close_station.id).unwrap();
-                        (idx, *close_idx, Connection::from_dist(dist))
-                    })
-                    .filter(|(idx1, idx2, _)| idx1 != idx2)
-                    .collect::<Vec<_>>()
-            })
+            .flat_map(|(idx, station)| self.get_walking_connections(station, idx))
             .collect::<Vec<_>>();
 
         for (idx, close_idx, con) in walking_connections {
@@ -148,14 +160,44 @@ impl TflGraph {
         }
     }
 
-    pub fn time_dependent_dijkstra(&self, start: String, start_time: NaiveTime) -> Vec<Path> {
+    pub fn tt_from_location(&mut self, start_loc: Location, start_time: NaiveTime) -> Vec<Path> {
+        let start = Station {
+            id: "".into(),
+            location: start_loc,
+            name: "".into(),
+        };
+
+        let start_idx = self.graph.add_node(start.clone());
+        let connections = self.get_walking_connections(&start, start_idx);
+
+        for (idx, close_idx, con) in connections {
+            self.graph.add_edge(idx, close_idx, con);
+        }
+
+        let result = self.tt_from_start_idx(start_idx, start_time);
+
+        // Remove the temporarily added start node.
+        self.graph.remove_node(start_idx);
+
+        result
+    }
+
+    pub fn tt_from_stop_id(&self, start: String, start_time: NaiveTime) -> Result<Vec<Path>> {
+        let start_idx = *self
+            .station_id_to_node
+            .get(&start)
+            .context("Invalid stop point ID")?;
+
+        Ok(self.tt_from_start_idx(start_idx, start_time))
+    }
+
+    pub fn tt_from_start_idx(&self, start_idx: NodeIndex, start_time: NaiveTime) -> Vec<Path> {
         let mut visited = self.graph.visit_map();
         let mut scores = HashMap::new();
         let mut parents: HashMap<NodeIndex, NodeIndex> = HashMap::new();
 
         let mut visit_next = BinaryHeap::new();
         let start_score = (start_time - NaiveTime::from_hms(0, 0, 0)).num_minutes() as u16;
-        let start_idx = *self.station_id_to_node.get(&start).unwrap();
         // All nodes should be in here.
         visit_next.push(MinScored(start_score, start_idx));
 
@@ -216,5 +258,30 @@ impl TflGraph {
             path.push(*parent);
         }
         path
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use geo::Point;
+    use mongodb::options::ClientOptions;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_from_location() {
+        let mut atlas_opts = ClientOptions::parse("mongodb://localhost:27017")
+            .await
+            .unwrap();
+        atlas_opts.app_name = Some("travel-time".to_string());
+        let atlas_client = mongodb::Client::with_options(atlas_opts).unwrap();
+        let mut graph = TflGraph::new(atlas_client).await.unwrap();
+
+        let loc = Location(Point::new(51.501105, -0.232320));
+        let time = NaiveTime::from_hms(10, 0, 0);
+        let results = graph.tt_from_location(loc, time);
+        assert!(!results.is_empty());
     }
 }

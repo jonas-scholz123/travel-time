@@ -52,7 +52,7 @@ impl Connection {
     pub fn get_minutes_to_departure(&self, minutes_since_midnight: usize) -> u16 {
         match &self.departure_times {
             DepartureTime::Instantaneous => 0,
-            DepartureTime::Timetable(arr) => arr[minutes_since_midnight],
+            DepartureTime::Timetable(arr) => arr[minutes_since_midnight % 1440],
         }
     }
 
