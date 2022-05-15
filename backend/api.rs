@@ -1,5 +1,6 @@
 use std::{env, time::Instant};
 
+use crate::graph::{location::Location, path::Path, tfl_graph::TflGraph};
 use anyhow::Result;
 use chrono::NaiveTime;
 use mongodb::options::ClientOptions;
@@ -9,29 +10,10 @@ use rocket::{get, routes, serde::json::Json, State};
 use rocket::{Request, Response};
 use tokio::sync::RwLock;
 
-pub struct Cors;
-
-#[rocket::async_trait]
-impl Fairing for Cors {
-    fn info(&self) -> Info {
-        Info {
-            name: "Add CORS headers to responses",
-            kind: Kind::Response,
-        }
-    }
-
-    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
-        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
-        response.set_header(Header::new(
-            "Access-Control-Allow-Methods",
-            "POST, GET, PATCH, OPTIONS",
-        ));
-        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
-        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
-    }
+#[get("/")]
+pub fn wake_up() -> &'static str {
+    "awake"
 }
-
-use crate::graph::{location::Location, path::Path, tfl_graph::TflGraph};
 
 #[get("/traveltime/<loc_string>/<time_str>")]
 pub async fn get_travel_time(
@@ -81,7 +63,7 @@ pub async fn rocket() -> Result<()> {
     let config = rocket::Config::figment().merge(("port", port));
 
     let _rocket = rocket::custom(config)
-        .mount("/", routes![get_travel_time])
+        .mount("/", routes![wake_up, get_travel_time])
         .manage(graph)
         .attach(Cors)
         .ignite()
@@ -90,4 +72,26 @@ pub async fn rocket() -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+pub struct Cors;
+
+#[rocket::async_trait]
+impl Fairing for Cors {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to responses",
+            kind: Kind::Response,
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "POST, GET, PATCH, OPTIONS",
+        ));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
 }
