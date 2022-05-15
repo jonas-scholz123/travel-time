@@ -1,6 +1,6 @@
 import Card from './components/Card';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Popup, Circle, Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -18,10 +18,13 @@ L.Icon.Default.mergeOptions({
 });
 
 const startingBounds = [[51.564956, -0.263222], [51.452705, 0.022491]];
+const colours = ["green", "yellow", "orange", "red"]
+const minutesBounds = [15, 30, 45, 60]
 
 function App() {
   const [coordsList, setCoordsList] = useState([])
-  const [data, setData] = useState(null)
+  const [circles, setCircles] = useState([])
+  const [layers, setLayers] = useState([])
 
   const addCoords = (coord) => {
     setCoordsList([...coordsList, coord])
@@ -31,13 +34,69 @@ function App() {
     setCoordsList(coordsList.filter((_, i) => i !== idx))
   }
 
+  const makeCircle = (path) => {
+    const minutes = path.minutes
+
+    if (minutes > minutesBounds[minutesBounds.length - 1]) {
+      return null;
+    }
+
+    var tier = 0;
+
+    //console.log("bounds", minutesBounds);
+    for (const [i, bound] of minutesBounds.entries()) {
+      tier = i;
+      if (bound > minutes) {
+        break;
+      }
+    }
+
+    const walkingMinutes = minutesBounds[tier] - minutes;
+
+    const center = [path.destination.location.x, path.destination.location.y];
+
+    return <Circle
+      center={center}
+      pathOptions={{ fillColor: colours[tier], weight: 0, fillOpacity: 1 }}
+      radius={80 * walkingMinutes}
+    />;
+  }
+
+  const makeLayers = (paths) => {
+    let d = new Object();
+
+    for (const [i, _] of minutesBounds.entries()) {
+      d[i] = [];
+    }
+
+    for (const path of paths) {
+      const idx = minutesBounds.findIndex(m => m > path.minutes);
+      if (idx === -1) {
+        continue;
+      }
+      d[idx].push(path);
+    }
+
+    return Object.entries(d).map(([idx, paths]) =>
+      <Pane name={"circles" + idx} style={{ zIndex: 500 + idx, opacity: 1 }}>
+        {paths.map(p => makeCircle(p))}
+      </Pane>
+    );
+  }
+
   useEffect(() => {
     if (coordsList.length === 0) {
       return;
     }
-    console.log("locs", coordsList[0]);
-    axios.get("https://still-sierra-43714.herokuapp.com/traveltime/" + coordsList[0].join(",") + "/10:00")
-      .then(resp => setData(resp.data))
+
+    const url = "http://localhost:3001/traveltime/" + coordsList[0].join(",") + "/10:00";
+
+    axios.get(encodeURI(url))
+      .then(resp => {
+        let data = resp.data;
+        data.sort((a, b) => b.minutes - a.minutes);
+        setCircles(data.map(d => makeCircle(d)));
+      })
   }, [coordsList])
 
   function ChangeView({ locs }) {
@@ -60,7 +119,7 @@ function App() {
 
   return (
     <div class="h-screen">
-      <MapContainer bounds={startingBounds} scrollWheelZoom={true} zoomControl={false}>
+      <MapContainer bounds={startingBounds} scrollWheelZoom zoomControl={false} preferCanvas fillOpacity={0.5}>
         <ChangeView locs={coordsList} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -73,6 +132,10 @@ function App() {
             </Popup>
           </Marker>)
         })}
+        <Pane name="circles" style={{ zIndex: 500, opacity: 0.5 }}>
+          {circles}
+        </Pane>
+        {/*layers*/}
       </MapContainer>
       <Card addCoords={addCoords} deleteCoords={deleteCoords} />
     </div>
