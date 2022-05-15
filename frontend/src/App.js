@@ -15,7 +15,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-const startingBounds = [[51.564956, -0.263222], [51.452705, 0.022491]];
+const CONFIG = require("./config.json");
+
 const colours = ["green", "yellow", "orange", "red"]
 const minutesBounds = [15, 30, 45, 60]
 
@@ -40,7 +41,6 @@ function App() {
 
     var tier = 0;
 
-    //console.log("bounds", minutesBounds);
     for (const [i, bound] of minutesBounds.entries()) {
       tier = i;
       if (bound > minutes) {
@@ -55,7 +55,7 @@ function App() {
     return <Circle
       center={center}
       pathOptions={{ fillColor: colours[tier], weight: 0, fillOpacity: 1 }}
-      radius={80 * walkingMinutes}
+      radius={CONFIG.walkingSpeed * walkingMinutes}
       key={key}
     />;
   }
@@ -65,7 +65,7 @@ function App() {
       return;
     }
 
-    const url = "http://localhost:3001/traveltime/" + coordsList[0].join(",") + "/10:00";
+    const url = CONFIG.backendUrl + "traveltime/" + coordsList[0].join(",") + "/10:00";
 
     axios.get(encodeURI(url))
       .then(resp => {
@@ -79,7 +79,7 @@ function App() {
 
     const map = useMap();
     if (locs.length == 0) {
-      map.fitBounds(startingBounds);
+      map.fitBounds(CONFIG.startingBounds);
       return null;
     }
 
@@ -95,7 +95,7 @@ function App() {
 
   return (
     <div className="h-screen">
-      <MapContainer bounds={startingBounds} scrollWheelZoom zoomControl={false} preferCanvas fillOpacity={0.5}>
+      <MapContainer bounds={CONFIG.startingBounds} scrollWheelZoom zoomControl={false} preferCanvas fillOpacity={0.5}>
         <ChangeView locs={coordsList} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
