@@ -13,7 +13,5 @@ axios.get(encodeURI(CONFIG.backendUrl))
   .catch(e => console.log("Health check failed: ", e));
 
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <App />
 );

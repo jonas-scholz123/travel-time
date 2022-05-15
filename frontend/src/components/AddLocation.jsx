@@ -16,7 +16,6 @@ function AddLocation(props) {
         axios
             .get("https://api.postcodes.io/postcodes/" + location)
             .then(response => {
-                console.log("response: ", response);
                 setLatlon([response.data.result.latitude, response.data.result.longitude])
             })
             .catch(error => setError(error.message))

@@ -21,62 +21,87 @@ const colours = ["green", "yellow", "orange", "red"]
 const minutesBounds = [15, 30, 45, 60]
 
 function App() {
-  const [coordsList, setCoordsList] = useState([])
-  const [circles, setCircles] = useState([])
+  const [coordsList, setCoordsList] = useState([]);
+  const [circles, setCircles] = useState([]);
+  const [zoom, setZoom] = useState(15);
+  const [allData, setAllData] = useState({})
 
   const addCoords = (coord) => {
-    setCoordsList([...coordsList, coord])
+    setCoordsList([...coordsList, coord]);
   }
 
   const deleteCoords = (idx) => {
-    setCoordsList(coordsList.filter((_, i) => i !== idx))
+    console.log("coords list", coordsList);
+    console.log("deleting coords at idx", idx);
+    setCoordsList(coordsList.filter((_, i) => i !== idx));
   }
 
-  const makeCircle = (path, key) => {
+  const makeCircle = (path, tier) => {
     const minutes = path.minutes
-
-    if (minutes > minutesBounds[minutesBounds.length - 1]) {
-      return null;
-    }
-
-    var tier = 0;
-
-    for (const [i, bound] of minutesBounds.entries()) {
-      tier = i;
-      if (bound > minutes) {
-        break;
-      }
-    }
-
     const walkingMinutes = minutesBounds[tier] - minutes;
-
     const center = [path.destination.location.x, path.destination.location.y];
-
     return <Circle
       center={center}
       pathOptions={{ fillColor: colours[tier], weight: 0, fillOpacity: 1 }}
-      radius={CONFIG.walkingSpeed * walkingMinutes}
-      key={key}
+      radius={CONFIG.walkingSpeed * (walkingMinutes + 0.5)}
+      key={path.destination.id + colours[tier]}
     />;
   }
 
   useEffect(() => {
+    let circles = []
+
+    let longestPaths = {};
+
+    for (const data of Object.values(allData)) {
+      for (const path of data) {
+        let key = path.destination.id;
+        if (!(key in longestPaths) || longestPaths[key].minutes < path.minutes) {
+          longestPaths[path.destination.id] = path;
+        }
+      }
+    }
+
+    for (const [idx, bound] of minutesBounds.entries()) {
+      circles.push(
+        ...Object.values(longestPaths)
+          .filter(p => p.minutes < bound)
+          .map((d, i) => makeCircle(d, idx)));
+
+    }
+    // TODO: improve performance using: https://github.com/domoritz/leaflet-maskcanvas;
+    setCircles(circles.reverse());
+  }, [allData])
+
+  useEffect(() => {
     if (coordsList.length === 0) {
+      setAllData({});
       return;
     }
 
-    const url = CONFIG.backendUrl + "traveltime/" + coordsList[0].join(",") + "/10:00";
+    let newData = {};
 
-    axios.get(encodeURI(url))
-      .then(resp => {
-        let data = resp.data;
-        data.sort((a, b) => b.minutes - a.minutes);
-        setCircles(data.map((d, i) => makeCircle(d, i.toString())));
-      })
+    for (const coords of coordsList) {
+      // declare the data fetching function
+      let key = coords.join(",") + "/18:00";
+      if (key in allData) {
+        console.log("key in allData: ", key);
+        newData[key] = allData[key]
+      }
+      else {
+        const url = CONFIG.backendUrl + "traveltime/" + key;
+        axios.get(encodeURI(url))
+          .then(resp => {
+            newData[key] = resp.data;
+            setAllData(newData);
+          });
+      }
+    }
+    if (Object.keys(allData).length > coordsList.length)
+      setAllData(newData);
   }, [coordsList])
 
   function ChangeView({ locs }) {
-
     const map = useMap();
     if (locs.length == 0) {
       map.fitBounds(CONFIG.startingBounds);
@@ -85,7 +110,7 @@ function App() {
 
     if (locs.length == 1) {
       map.fitBounds(locs);
-      map.setZoom(15);
+      map.setZoom(13);
       return null;
     }
 
@@ -93,24 +118,32 @@ function App() {
     return null;
   }
 
+  function CircleLayer({ circles }) {
+    return (
+      <div>
+        <Pane name="circles" style={{ zIndex: 500, opacity: CONFIG.opacity }}>
+          {circles}
+        </Pane>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen">
-      <MapContainer bounds={CONFIG.startingBounds} scrollWheelZoom zoomControl={false} preferCanvas fillOpacity={0.5}>
+      <MapContainer bounds={CONFIG.startingBounds} scrollWheelZoom zoomControl={false} preferCanvas zoom={zoom}>
         <ChangeView locs={coordsList} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
         />
-        {coordsList.map((c, i) => {
-          return (<Marker position={c} key={i.toString()}>
+        <CircleLayer circles={circles} />
+        {coordsList.map((c, i) =>
+          <Marker position={c} key={i.toString()}>
             <Popup>
               A pretty CSS3 popup. <br /> Easily customizable.
             </Popup>
-          </Marker>)
-        })}
-        <Pane name="circles" style={{ zIndex: 500, opacity: 0.5 }}>
-          {circles}
-        </Pane>
+          </Marker>
+        )}
       </MapContainer>
       <Card addCoords={addCoords} deleteCoords={deleteCoords} />
     </div>

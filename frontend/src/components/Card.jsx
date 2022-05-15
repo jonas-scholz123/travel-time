@@ -24,7 +24,7 @@ function Card(props) {
             <form className="w-full bg-white rounded">
                 <h1 className="text-gray-600 font-semibold pb-2"> Locations: </h1>
                 {locations.map((l, i) => {
-                    return <EnteredLocation postcode={l} key={i.toString()} idx={i} onDelete={(idx) => onDelete(idx)} />
+                    return <EnteredLocation postcode={l} key={l} idx={i} onDelete={onDelete} />
                 })}
                 <AddLocation onClick={onNewLoc} />
             </form>
