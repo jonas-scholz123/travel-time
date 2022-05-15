@@ -2,8 +2,6 @@ import Card from './components/Card';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { Marker, Popup, Circle, Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -34,7 +32,7 @@ function App() {
     setCoordsList(coordsList.filter((_, i) => i !== idx))
   }
 
-  const makeCircle = (path) => {
+  const makeCircle = (path, key) => {
     const minutes = path.minutes
 
     if (minutes > minutesBounds[minutesBounds.length - 1]) {
@@ -59,6 +57,7 @@ function App() {
       center={center}
       pathOptions={{ fillColor: colours[tier], weight: 0, fillOpacity: 1 }}
       radius={80 * walkingMinutes}
+      key={key}
     />;
   }
 
@@ -95,7 +94,7 @@ function App() {
       .then(resp => {
         let data = resp.data;
         data.sort((a, b) => b.minutes - a.minutes);
-        setCircles(data.map(d => makeCircle(d)));
+        setCircles(data.map((d, i) => makeCircle(d, i.toString())));
       })
   }, [coordsList])
 
@@ -135,7 +134,6 @@ function App() {
         <Pane name="circles" style={{ zIndex: 500, opacity: 0.5 }}>
           {circles}
         </Pane>
-        {/*layers*/}
       </MapContainer>
       <Card addCoords={addCoords} deleteCoords={deleteCoords} />
     </div>
