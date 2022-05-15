@@ -22,7 +22,6 @@ const minutesBounds = [15, 30, 45, 60]
 function App() {
   const [coordsList, setCoordsList] = useState([])
   const [circles, setCircles] = useState([])
-  const [layers, setLayers] = useState([])
 
   const addCoords = (coord) => {
     setCoordsList([...coordsList, coord])
@@ -59,28 +58,6 @@ function App() {
       radius={80 * walkingMinutes}
       key={key}
     />;
-  }
-
-  const makeLayers = (paths) => {
-    let d = new Object();
-
-    for (const [i, _] of minutesBounds.entries()) {
-      d[i] = [];
-    }
-
-    for (const path of paths) {
-      const idx = minutesBounds.findIndex(m => m > path.minutes);
-      if (idx === -1) {
-        continue;
-      }
-      d[idx].push(path);
-    }
-
-    return Object.entries(d).map(([idx, paths]) =>
-      <Pane name={"circles" + idx} style={{ zIndex: 500 + idx, opacity: 1 }}>
-        {paths.map(p => makeCircle(p))}
-      </Pane>
-    );
   }
 
   useEffect(() => {
