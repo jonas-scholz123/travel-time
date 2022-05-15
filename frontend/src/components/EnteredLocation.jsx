@@ -20,9 +20,9 @@ function EnteredLocation(props) {
     }
 
     return (
-        <div class="flex items-center shadow-sm rounded h-9 border mt-1">
-            <div class="border-r h-full flex grow items-center">
-                <input class="
+        <div className="flex items-center shadow-sm rounded h-9 border mt-1">
+            <div className="border-r h-full flex grow items-center">
+                <input className="
                         appearance-none
                         bg-transparent
                         w-full
@@ -35,11 +35,11 @@ function EnteredLocation(props) {
 
                 </input>
             </div>
-            <div class="bg-white text-gray-400 hover:bg-red-500 hover:text-white
+            <div className="bg-white text-gray-400 hover:bg-red-500 hover:text-white
                 h-full rounded-r flex items-center w-9 justify-center hover:cursor-pointer"
                 onClick={() => props.onDelete(props.idx)}>
 
-                <button class="text-lg" type="button">
+                <button className="text-lg" type="button">
                     <FaMinus />
                 </button>
             </div>

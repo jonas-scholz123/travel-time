@@ -32,9 +32,9 @@ function AddLocation(props) {
     }, [latlon]);
 
     return (
-        <div class={"flex items-center shadow-sm border rounded h-9 mt-5 " + (error == "" ? "" : "outline outline-red-500")}>
-            <div class={"border-r h-full flex grow items-center rounded-l"}>
-                <input class="
+        <div className={"flex items-center shadow-sm border rounded h-9 mt-5 " + (error == "" ? "" : "outline outline-red-500")}>
+            <div className={"border-r h-full flex grow items-center rounded-l"}>
+                <input className="
                         appearance-none
                         bg-transparent
                         w-full
@@ -47,11 +47,11 @@ function AddLocation(props) {
                         " type="text" placeholder="e.g. SW1A 2AA" value={location} onChange={handleChange}>
                 </input>
             </div>
-            <div class="bg-white text-green-500 hover:bg-green-500 hover:text-white
+            <div className="bg-white text-green-500 hover:bg-green-500 hover:text-white
                 h-full rounded-r flex items-center w-9 justify-center
                 hover:cursor-pointer"
                 onClick={handleSubmit}>
-                <button class="text-lg" type="button">
+                <button className="text-lg" type="button">
                     <FaPlus />
                 </button>
             </div>

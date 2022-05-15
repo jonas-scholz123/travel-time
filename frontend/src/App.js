@@ -94,7 +94,7 @@ function App() {
   }
 
   return (
-    <div class="h-screen">
+    <div className="h-screen">
       <MapContainer bounds={startingBounds} scrollWheelZoom zoomControl={false} preferCanvas fillOpacity={0.5}>
         <ChangeView locs={coordsList} />
         <TileLayer
