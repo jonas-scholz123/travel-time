@@ -1,4 +1,4 @@
-import Card from './components/Card';
+import LocationCard from './components/LocationCard';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { Marker, Popup, Circle, Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'
@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import L from 'leaflet';
 import useAxiosGet from './utils';
+import BoundsCard from './components/BoundsCard';
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -18,13 +19,15 @@ L.Icon.Default.mergeOptions({
 const CONFIG = require("./config.json");
 
 const colours = ["green", "yellow", "orange", "red"]
-const minutesBounds = [15, 30, 45, 60]
+
 
 function App() {
   const [coordsList, setCoordsList] = useState([]);
   const [circles, setCircles] = useState([]);
   const [zoom, setZoom] = useState(15);
-  const [allData, setAllData] = useState({})
+  const [allData, setAllData] = useState({});
+  // TODO: Use top N-th percentile bounds instead.
+  const [bounds, setBounds] = useState([15, 30, 45, 60]);
 
   const addCoords = (coord) => {
     setCoordsList([...coordsList, coord]);
@@ -38,7 +41,7 @@ function App() {
 
   const makeCircle = (path, tier) => {
     const minutes = path.minutes
-    const walkingMinutes = minutesBounds[tier] - minutes;
+    const walkingMinutes = bounds[tier] - minutes;
     const center = [path.destination.location.x, path.destination.location.y];
     return <Circle
       center={center}
@@ -49,6 +52,7 @@ function App() {
   }
 
   useEffect(() => {
+    console.log('bounds: ', bounds);
     let circles = []
 
     let longestPaths = {};
@@ -62,7 +66,7 @@ function App() {
       }
     }
 
-    for (const [idx, bound] of minutesBounds.entries()) {
+    for (const [idx, bound] of bounds.entries()) {
       circles.push(
         ...Object.values(longestPaths)
           .filter(p => p.minutes < bound)
@@ -71,7 +75,7 @@ function App() {
     }
     // TODO: improve performance using: https://github.com/domoritz/leaflet-maskcanvas;
     setCircles(circles.reverse());
-  }, [allData])
+  }, [allData, bounds])
 
   useEffect(() => {
     if (coordsList.length === 0) {
@@ -145,7 +149,11 @@ function App() {
           </Marker>
         )}
       </MapContainer>
-      <Card addCoords={addCoords} deleteCoords={deleteCoords} />
+
+      <div className="absolute top-3 left-3 w-96 z-10000">
+        <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} />
+        <BoundsCard colours={colours} setBounds={setBounds} bounds={bounds} />
+      </div>
     </div>
   );
 }

@@ -11,5 +11,6 @@
             0.022491
         ]
     ],
-    "opacity": 0.4
+    "opacity": 0.4,
+    "minBoundSize": 5
 }

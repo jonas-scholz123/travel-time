@@ -1,10 +1,8 @@
 import AddLocation from "./AddLocation";
 import EnteredLocation from "./EnteredLocation";
 import { useEffect, useState } from "react";
-import useAxiosGet from "../utils";
-import axios from "axios";
 
-function Card(props) {
+function LocationCard(props) {
 
     const [locations, setLocations] = useState([])
 
@@ -20,7 +18,7 @@ function Card(props) {
 
 
     return (
-        <div className="absolute top-3 left-3 bg-white p-3 rounded-lg border border-gray-200 shadow w-96 z-10000">
+        <div className="bg-white p-3 rounded-lg border border-gray-200 shadow ">
             <form className="w-full bg-white rounded">
                 <h1 className="text-gray-600 font-semibold pb-2"> Locations: </h1>
                 {locations.map((l, i) => {
@@ -32,4 +30,4 @@ function Card(props) {
     );
 }
 
-export default Card;
+export default LocationCard;
