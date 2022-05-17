@@ -56,7 +56,7 @@ function BoundsCard(props) {
                 <Slider
                     components={{ Thumb: ThumbComponent }}
                     value={vals}
-                    max={120}
+                    max={CONFIG.maxTravelMins}
                     min={0}
                     onChange={handleChange}
                     onChangeCommitted={() => props.setBounds(vals)}

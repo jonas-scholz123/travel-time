@@ -13,5 +13,12 @@
     ],
     "opacity": 0.4,
     "minBoundSize": 5,
-    "padding": 300
+    "padding": 300,
+    "maxTravelMins": 100,
+    "colours": [
+        "green",
+        "yellow",
+        "orange",
+        "red"
+    ]
 }

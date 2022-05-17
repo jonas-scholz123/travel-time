@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import ChangeView from './components/ChangeView';
 
 import L from 'leaflet';
-import useAxiosGet from './utils';
 import BoundsCard from './components/BoundsCard';
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -19,12 +18,19 @@ L.Icon.Default.mergeOptions({
 
 const CONFIG = require("./config.json");
 
-const colours = ["green", "yellow", "orange", "red"]
-
-
-
+const colours = CONFIG.colours;
 
 function App() {
+
+  // If you move this into a separate file the app gets very slow.
+  // Only the javascript gods know why.
+  const CircleLayer = ({ circles }) =>
+    <div>
+      <Pane name="circles" style={{ zIndex: 500, opacity: CONFIG.opacity }}>
+        {circles}
+      </Pane>
+    </div>
+
   const [coordsList, setCoordsList] = useState([]);
   const [circles, setCircles] = useState([]);
   const [allData, setAllData] = useState({});
@@ -43,16 +49,6 @@ function App() {
     setCoordsList(copy);
   }
 
-  function CircleLayer({ circles }) {
-    return (
-      <div>
-        <Pane name="circles" style={{ zIndex: 500, opacity: CONFIG.opacity }}>
-          {circles}
-        </Pane>
-      </div>
-    )
-  }
-
   const deleteCoords = (idx) => {
     setCoordsList(coordsList.filter((_, i) => i !== idx));
   }
@@ -69,8 +65,9 @@ function App() {
     />;
   }
 
+  // When new data is loaded, we calculate the longest paths
+  // to everywhere to colour the map in correctly.
   useEffect(() => {
-
     let longestPathsDict = {};
 
     for (const data of Object.values(allData)) {
@@ -86,6 +83,8 @@ function App() {
 
   }, [allData])
 
+  // When the longest path or the bounds change,
+  // we need to re-render the circles.
   useEffect(() => {
     let circles = []
     for (const [idx, bound] of bounds.entries()) {
@@ -100,11 +99,14 @@ function App() {
     setChangeView(false);
   }, [longestPaths, bounds])
 
+  // When the longest paths to every station have been calculated,
+  // we can determine what the lowest bound should look like (so
+  // that there's always a green layer on the map).
   useEffect(() => {
     let shortestTravelTime = Math.min(...Object.values(longestPaths).map(p => p.minutes))
     setBounds(oldBounds => {
       let copy = [...oldBounds];
-      copy[0] = shortestTravelTime + CONFIG.minBoundSize;
+      copy[0] = Math.min(shortestTravelTime + CONFIG.minBoundSize, copy[1]);
       return copy
     });
 
@@ -149,9 +151,6 @@ function App() {
         <CircleLayer circles={circles} />
         {coordsList.map((c, i) =>
           <Marker position={c} key={i.toString()}>
-            <Popup>
-              A pretty CSS3 popup. <br /> Easily customizable.
-            </Popup>
           </Marker>
         )}
       </MapContainer>

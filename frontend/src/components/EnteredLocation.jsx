@@ -33,7 +33,7 @@ function EnteredLocation(props) {
     }
 
     return (
-        <div className="flex items-center shadow-sm rounded h-9 border mt-1">
+        <div className={"flex items-center shadow-sm rounded h-9 border mt-1 " + (error !== "" && "outline outline-red-500")}>
             <div className="border-r h-full flex grow items-center">
                 <input className="
                         appearance-none
@@ -56,7 +56,7 @@ function EnteredLocation(props) {
                     <FaMinus />
                 </button>
             </div>
-        </div>
+        </div >
     )
 }
 
