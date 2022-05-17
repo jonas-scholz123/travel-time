@@ -12,5 +12,6 @@
         ]
     ],
     "opacity": 0.4,
-    "minBoundSize": 5
+    "minBoundSize": 5,
+    "padding": 300
 }

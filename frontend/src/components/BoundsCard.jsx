@@ -1,7 +1,7 @@
-import { useState } from "react";
 import Slider from '@mui/material/Slider';
 import clsx from 'clsx';
 import { SliderThumb } from "@mui/material";
+import { useEffect, useState } from 'react';
 
 const CONFIG = require("../config.json");
 
@@ -16,8 +16,9 @@ function ThumbComponent(props) {
 }
 
 function BoundsCard(props) {
-
     const [vals, setVals] = useState(props.bounds);
+    // If external bounds change, this function handles it.
+    useEffect(() => { setVals(props.bounds) }, [props.bounds]);
 
     const handleChange = (event, newVals) => {
         for (const [i, newVal] of newVals.entries()) {
@@ -48,8 +49,6 @@ function BoundsCard(props) {
         sx['& .thumb' + i] = { backgroundColor: colour };
     }
 
-    console.log(sx);
-
     return (
         <div className="bg-white p-3 rounded-lg border border-gray-200 shadow my-2">
             <form className="w-full bg-white rounded">
@@ -57,10 +56,15 @@ function BoundsCard(props) {
                 <Slider
                     components={{ Thumb: ThumbComponent }}
                     value={vals}
+                    max={120}
+                    min={0}
                     onChange={handleChange}
                     onChangeCommitted={() => props.setBounds(vals)}
                     valueLabelDisplay="auto"
-                    valueLabelFormat={(val, i) => val + i + " mins"}
+                    valueLabelFormat={(val, i) => {
+                        const prevVal = i === 0 ? "0" : vals[i - 1].toString();
+                        return prevVal + "-" + val + " mins";
+                    }}
                     disableSwap
                     sx={sx}
                 />

@@ -4,6 +4,7 @@ import { Marker, Popup, Circle, Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import ChangeView from './components/ChangeView';
 
 import L from 'leaflet';
 import useAxiosGet from './utils';
@@ -21,16 +22,29 @@ const CONFIG = require("./config.json");
 const colours = ["green", "yellow", "orange", "red"]
 
 
+
+
 function App() {
   const [coordsList, setCoordsList] = useState([]);
   const [circles, setCircles] = useState([]);
-  const [zoom, setZoom] = useState(15);
   const [allData, setAllData] = useState({});
   // TODO: Use top N-th percentile bounds instead.
   const [bounds, setBounds] = useState([15, 30, 45, 60]);
+  const [changeView, setChangeView] = useState(true);
+  const [longestPaths, setLongestPaths] = useState({});
 
   const addCoords = (coord) => {
     setCoordsList([...coordsList, coord]);
+  }
+
+  function CircleLayer({ circles }) {
+    return (
+      <div>
+        <Pane name="circles" style={{ zIndex: 500, opacity: CONFIG.opacity }}>
+          {circles}
+        </Pane>
+      </div>
+    )
   }
 
   const deleteCoords = (idx) => {
@@ -52,30 +66,46 @@ function App() {
   }
 
   useEffect(() => {
-    console.log('bounds: ', bounds);
-    let circles = []
 
-    let longestPaths = {};
+    let longestPathsDict = {};
 
     for (const data of Object.values(allData)) {
       for (const path of data) {
         let key = path.destination.id;
-        if (!(key in longestPaths) || longestPaths[key].minutes < path.minutes) {
-          longestPaths[path.destination.id] = path;
+        if (!(key in longestPathsDict) || longestPathsDict[key].minutes < path.minutes) {
+          longestPathsDict[path.destination.id] = path;
         }
       }
     }
 
+    setLongestPaths(longestPathsDict);
+
+  }, [allData])
+
+  useEffect(() => {
+    let circles = []
     for (const [idx, bound] of bounds.entries()) {
       circles.push(
         ...Object.values(longestPaths)
           .filter(p => p.minutes < bound)
           .map((d, i) => makeCircle(d, idx)));
-
     }
+
     // TODO: improve performance using: https://github.com/domoritz/leaflet-maskcanvas;
     setCircles(circles.reverse());
-  }, [allData, bounds])
+    setChangeView(false);
+  }, [longestPaths, bounds])
+
+  useEffect(() => {
+    let shortestTravelTime = Math.min(...Object.values(longestPaths).map(p => p.minutes))
+    setBounds(oldBounds => {
+      let copy = [...oldBounds];
+      copy[0] = shortestTravelTime + 1;
+      console.log("setting bounds from -to : ", oldBounds, copy);
+      return copy
+    });
+
+  }, [longestPaths])
 
   useEffect(() => {
     if (coordsList.length === 0) {
@@ -103,39 +133,13 @@ function App() {
     }
     if (Object.keys(allData).length > coordsList.length)
       setAllData(newData);
+    setChangeView(true);
   }, [coordsList])
-
-  function ChangeView({ locs }) {
-    const map = useMap();
-    if (locs.length == 0) {
-      map.fitBounds(CONFIG.startingBounds);
-      return null;
-    }
-
-    if (locs.length == 1) {
-      map.fitBounds(locs);
-      map.setZoom(13);
-      return null;
-    }
-
-    map.fitBounds(locs);
-    return null;
-  }
-
-  function CircleLayer({ circles }) {
-    return (
-      <div>
-        <Pane name="circles" style={{ zIndex: 500, opacity: CONFIG.opacity }}>
-          {circles}
-        </Pane>
-      </div>
-    )
-  }
 
   return (
     <div className="h-screen">
-      <MapContainer bounds={CONFIG.startingBounds} scrollWheelZoom zoomControl={false} preferCanvas zoom={zoom}>
-        <ChangeView locs={coordsList} />
+      <MapContainer bounds={CONFIG.startingBounds} scrollWheelZoom zoomControl={false} preferCanvas>
+        <ChangeView locs={coordsList} changeView={changeView} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
@@ -152,7 +156,7 @@ function App() {
 
       <div className="absolute top-3 left-3 w-96 z-10000">
         <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} />
-        <BoundsCard colours={colours} setBounds={setBounds} bounds={bounds} />
+        {circles.length > 0 && <BoundsCard colours={colours} setBounds={setBounds} bounds={bounds} />}
       </div>
     </div>
   );
