@@ -3,9 +3,12 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 function AddLocation(props) {
-    const [location, setLocation] = useState("");
-    const [error, setError] = useState("");
+    const [location, setLocation] = useState(props.location);
+    const [error, setError] = useState(props.error);
     const [latlon, setLatlon] = useState(("", ""));
+
+    useEffect(() => { setError(props.error) }, [props.error]);
+    useEffect(() => { setLocation(props.location) }, [props.location]);
 
     const handleChange = (event) => {
         var loc = event.target.value;
@@ -18,7 +21,7 @@ function AddLocation(props) {
             .then(response => {
                 setLatlon([response.data.result.latitude, response.data.result.longitude])
             })
-            .catch(error => setError(error.message))
+            .catch(error => setError("Unknown postcode"))
     }
 
     useEffect(() => {
@@ -30,10 +33,18 @@ function AddLocation(props) {
         }
     }, [latlon]);
 
+    const onKeypress = (e) => {
+        if (e.key === "Enter") {
+            handleSubmit();
+        }
+    }
+
     return (
-        <div className={"flex items-center shadow-sm border rounded h-9 mt-5 " + (error == "" ? "" : "outline outline-red-500")}>
-            <div className={"border-r h-full flex grow items-center rounded-l"}>
-                <input className="
+        <div className="mt-5">
+            {error !== "" && <p className="mb-1 text-xs text-red-500">{error}</p>}
+            <div className={"flex items-center shadow-sm border rounded h-9 " + (error == "" ? "" : "outline outline-red-500")}>
+                <div className={"border-r h-full flex grow items-center rounded-l"}>
+                    <input className="
                         appearance-none
                         bg-transparent
                         w-full
@@ -43,18 +54,19 @@ function AddLocation(props) {
                         font-light
                         placeholder-gray-300
                         px-3
-                        " type="text" placeholder="e.g. SW1A 2AA" value={location} onChange={handleChange}>
-                </input>
-            </div>
-            <div className="bg-white text-green-500 hover:bg-green-500 hover:text-white
+                        " type="text" placeholder="e.g. SW1A 2AA" value={location} onChange={handleChange} onKeyDown={onKeypress}>
+                    </input>
+                </div>
+                <div className="bg-white text-green-500 hover:bg-green-500 hover:text-white
                 h-full rounded-r flex items-center w-9 justify-center
                 hover:cursor-pointer"
-                onClick={handleSubmit}>
-                <button className="text-lg" type="button">
-                    <FaPlus />
-                </button>
-            </div>
-        </div >
+                    onClick={handleSubmit}>
+                    <button className="text-lg" type="button">
+                        <FaPlus />
+                    </button>
+                </div>
+            </div >
+        </div>
     )
 }
 

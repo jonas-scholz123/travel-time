@@ -1,22 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaMinus } from "react-icons/fa";
+import axios from "axios";
 
 function EnteredLocation(props) {
 
-    const [val, setVal] = useState(props.postcode);
+    const [location, setLocation] = useState(props.postcode);
+    const [coords, setCoords] = useState([]);
+    const [error, setError] = useState("");
 
-    const onBlur = (e) => {
-        console.log("triggered")
-    }
+    useEffect(() => {
+        if (coords.length > 0)
+            props.handleSubmit(props.idx, location, coords);
+    }, [coords])
 
     const onKeypress = (e) => {
         if (e.key === "Enter") {
-            onBlur(e);
+            handleChange();
         }
     }
 
     const onChange = (e) => {
-        setVal(e.target.value);
+        setLocation(e.target.value);
+    }
+
+    const handleChange = () => {
+        axios
+            .get("https://api.postcodes.io/postcodes/" + location)
+            .then(response => {
+                setCoords([response.data.result.latitude, response.data.result.longitude])
+            })
+            .catch(error => setError(error.message))
     }
 
     return (
@@ -31,7 +44,7 @@ function EnteredLocation(props) {
                         focus:outline-none
                         font-light
                         px-3
-                        " type="text" value={val} onChange={onChange} onBlur={onBlur} onKeyDown={onKeypress}>
+                        " type="text" value={location} onChange={onChange} onBlur={handleChange} onKeyDown={onKeypress}>
 
                 </input>
             </div>

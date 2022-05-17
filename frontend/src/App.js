@@ -37,6 +37,12 @@ function App() {
     setCoordsList([...coordsList, coord]);
   }
 
+  const changeCoords = (idx, coord) => {
+    let copy = [...coordsList];
+    copy[idx] = coord;
+    setCoordsList(copy);
+  }
+
   function CircleLayer({ circles }) {
     return (
       <div>
@@ -48,8 +54,6 @@ function App() {
   }
 
   const deleteCoords = (idx) => {
-    console.log("coords list", coordsList);
-    console.log("deleting coords at idx", idx);
     setCoordsList(coordsList.filter((_, i) => i !== idx));
   }
 
@@ -100,8 +104,7 @@ function App() {
     let shortestTravelTime = Math.min(...Object.values(longestPaths).map(p => p.minutes))
     setBounds(oldBounds => {
       let copy = [...oldBounds];
-      copy[0] = shortestTravelTime + 1;
-      console.log("setting bounds from -to : ", oldBounds, copy);
+      copy[0] = shortestTravelTime + CONFIG.minBoundSize;
       return copy
     });
 
@@ -119,7 +122,6 @@ function App() {
       // declare the data fetching function
       let key = coords.join(",") + "/18:00";
       if (key in allData) {
-        console.log("key in allData: ", key);
         newData[key] = allData[key]
       }
       else {
@@ -155,7 +157,7 @@ function App() {
       </MapContainer>
 
       <div className="absolute top-3 left-3 w-96 z-10000">
-        <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} />
+        <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />
         {circles.length > 0 && <BoundsCard colours={colours} setBounds={setBounds} bounds={bounds} />}
       </div>
     </div>
