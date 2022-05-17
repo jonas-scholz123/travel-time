@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import ChangeView from './components/ChangeView';
+import TimeCard from './components/TimeCard';
 
 import L from 'leaflet';
 import BoundsCard from './components/BoundsCard';
@@ -34,6 +35,7 @@ function App() {
   const [coordsList, setCoordsList] = useState([]);
   const [circles, setCircles] = useState([]);
   const [allData, setAllData] = useState({});
+  const [time, setTime] = useState("18:00");
   // TODO: Use top N-th percentile bounds instead.
   const [bounds, setBounds] = useState([15, 30, 45, 60]);
   const [changeView, setChangeView] = useState(true);
@@ -113,6 +115,16 @@ function App() {
   }, [longestPaths])
 
   useEffect(() => {
+    updateAllData();
+    setChangeView(true);
+  }, [coordsList])
+
+  useEffect(() => {
+    updateAllData();
+    setChangeView(false);
+  }, [time])
+
+  const updateAllData = () => {
     if (coordsList.length === 0) {
       setAllData({});
       return;
@@ -122,7 +134,7 @@ function App() {
 
     for (const coords of coordsList) {
       // declare the data fetching function
-      let key = coords.join(",") + "/18:00";
+      let key = coords.join(",") + "/" + time;
       if (key in allData) {
         newData[key] = allData[key]
       }
@@ -137,8 +149,7 @@ function App() {
     }
     if (Object.keys(allData).length > coordsList.length)
       setAllData(newData);
-    setChangeView(true);
-  }, [coordsList])
+  }
 
   return (
     <div className="h-screen">
@@ -158,6 +169,7 @@ function App() {
       <div className="absolute top-3 left-3 w-96 z-10000">
         <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />
         {circles.length > 0 && <BoundsCard colours={colours} setBounds={setBounds} bounds={bounds} />}
+        {circles.length > 0 && <TimeCard time={time} setTime={setTime} />}
       </div>
     </div>
   );

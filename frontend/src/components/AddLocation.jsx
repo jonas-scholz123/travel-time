@@ -21,7 +21,7 @@ function AddLocation(props) {
             .then(response => {
                 setLatlon([response.data.result.latitude, response.data.result.longitude])
             })
-            .catch(error => setError("Unknown postcode"))
+            .catch(_ => setError("Unknown postcode"))
     }
 
     useEffect(() => {
@@ -35,6 +35,8 @@ function AddLocation(props) {
 
     const onKeypress = (e) => {
         if (e.key === "Enter") {
+            e.preventDefault();
+            console.log("a");
             handleSubmit();
         }
     }

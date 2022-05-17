@@ -39,7 +39,7 @@ function LocationCard(props) {
             <form className="w-full bg-white rounded">
                 <h1 className="text-gray-600 font-semibold pb-2"> Locations: </h1>
                 {locations.map((l, i) => {
-                    return <EnteredLocation postcode={l} key={l} idx={i} onDelete={onDelete} handleSubmit={handleLocationChange} />
+                    return <EnteredLocation postcode={l} key={l} idx={i} onDelete={onDelete} handleSubmit={handleLocationChange} forbiddenNames={locations} />
                 })}
                 <AddLocation onClick={onNewLoc} error={newLocError} location={newLocVal} />
             </form>

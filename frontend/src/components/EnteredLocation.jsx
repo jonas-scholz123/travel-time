@@ -24,12 +24,18 @@ function EnteredLocation(props) {
     }
 
     const handleChange = () => {
+
+        if (props.forbiddenNames.includes(location)) {
+            setError("No duplicates");
+            return;
+        }
         axios
             .get("https://api.postcodes.io/postcodes/" + location)
             .then(response => {
                 setCoords([response.data.result.latitude, response.data.result.longitude])
             })
             .catch(error => setError(error.message))
+        setError("");
     }
 
     return (
