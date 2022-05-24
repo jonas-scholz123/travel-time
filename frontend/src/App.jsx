@@ -6,6 +6,7 @@ import axios from 'axios';
 import { useEffect, useState } from 'react';
 import ChangeView from './components/ChangeView';
 import TimeCard from './components/TimeCard';
+import BackendStatusCard from './components/BackendStatusCard';
 
 import L from 'leaflet';
 import BoundsCard from './components/BoundsCard';
@@ -23,7 +24,7 @@ const colours = CONFIG.colours;
 
 function App() {
 
-  // If you move this into a separate file the app gets very slow.
+  // If you move this into a separate file the app gets slower.
   // Only the javascript gods know why.
   const CircleLayer = ({ circles }) =>
     <div>
@@ -40,6 +41,7 @@ function App() {
   const [bounds, setBounds] = useState([15, 30, 45, 60]);
   const [changeView, setChangeView] = useState(true);
   const [longestPaths, setLongestPaths] = useState({});
+  const [backendAwake, setBackendOk] = useState(false);
 
   const addCoords = (coord) => {
     setCoordsList([...coordsList, coord]);
@@ -66,6 +68,14 @@ function App() {
       key={path.destination.id + colours[tier]}
     />;
   }
+
+  useEffect(() => {
+    console.log("Waking up the backend...");
+    axios.get(encodeURI(CONFIG.backendUrl))
+      .then(_ => setBackendOk(true))
+      .catch(e => console.log("Health check failed: ", e));
+
+  }, [])
 
   // When new data is loaded, we calculate the longest paths
   // to everywhere to colour the map in correctly.
@@ -166,10 +176,11 @@ function App() {
         )}
       </MapContainer>
 
-      <div className="absolute top-3 left-3 w-96 z-10000">
+      <div className="absolute top-0 left-0 md:top-3 md:left-3 md:w-96 w-full z-10000">
         <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />
         {circles.length > 0 && <BoundsCard colours={colours} setBounds={setBounds} bounds={bounds} />}
         {circles.length > 0 && <TimeCard time={time} setTime={setTime} />}
+        {!backendAwake && <BackendStatusCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />}
       </div>
     </div>
   );
