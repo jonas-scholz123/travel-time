@@ -57,15 +57,21 @@ function App() {
     setCoordsList(coordsList.filter((_, i) => i !== idx));
   }
 
-  const makeCircle = (path, tier) => {
+  const handleBoundsChange = (newBounds) => {
+    setBounds(newBounds);
+    const circles = makeCircles(longestPaths, newBounds);
+    setCircles(circles);
+  }
+
+  const makeCircle = (path, boundMins, colour) => {
     const minutes = path.minutes
-    const walkingMinutes = bounds[tier] - minutes;
+    const walkingMinutes = boundMins - minutes;
     const center = [path.destination.location.x, path.destination.location.y];
     return <Circle
       center={center}
-      pathOptions={{ fillColor: colours[tier], weight: 0, fillOpacity: 1 }}
+      pathOptions={{ fillColor: colour, weight: 0, fillOpacity: 1 }}
       radius={CONFIG.walkingSpeed * (walkingMinutes + 0.5)}
-      key={path.destination.id + colours[tier]}
+      key={path.destination.id + colour}
     />;
   }
 
@@ -79,9 +85,8 @@ function App() {
 
   // When new data is loaded, we calculate the longest paths
   // to everywhere to colour the map in correctly.
-  useEffect(() => {
+  const determineLongestPath = async (allData) => {
     let longestPathsDict = {};
-
     for (const data of Object.values(allData)) {
       for (const path of data) {
         let key = path.destination.id;
@@ -91,53 +96,59 @@ function App() {
       }
     }
 
-    setLongestPaths(longestPathsDict);
-
-  }, [allData])
+    return longestPathsDict;
+  }
 
   // When the longest path or the bounds change,
   // we need to re-render the circles.
-  useEffect(() => {
+  const makeCircles = (longestPaths, bounds) => {
     let circles = []
     for (const [idx, bound] of bounds.entries()) {
       circles.push(
         ...Object.values(longestPaths)
           .filter(p => p.minutes < bound)
-          .map((d, i) => makeCircle(d, idx)));
+          .map(d => makeCircle(d, bounds[idx], colours[idx])));
     }
 
     // TODO: improve performance using: https://github.com/domoritz/leaflet-maskcanvas;
-    setCircles(circles.reverse());
-    setChangeView(false);
-  }, [longestPaths, bounds])
+    return circles.reverse();
+  }
 
   // When the longest paths to every station have been calculated,
   // we can determine what the lowest bound should look like (so
   // that there's always a green layer on the map).
-  useEffect(() => {
+  const computeBounds = (longestPaths) => {
     let shortestTravelTime = Math.min(...Object.values(longestPaths).map(p => p.minutes))
-    setBounds(oldBounds => {
-      let copy = [...oldBounds];
-      copy[0] = Math.min(shortestTravelTime + CONFIG.minBoundSize, copy[1]);
-      return copy
-    });
+    let copy = [...bounds];
+    copy[0] = Math.min(shortestTravelTime + CONFIG.minBoundSize, copy[1]);
+    return copy
+  }
 
-  }, [longestPaths])
+  const refreshState = async () => {
+    const allData = await fetchAllData();
+    // Cache the data.
+    setAllData(allData);
+    const longestPathsDict = await determineLongestPath(allData);
+    setLongestPaths(longestPathsDict);
+    const newBounds = computeBounds(longestPathsDict);
+    setBounds(newBounds);
+    const newCircles = makeCircles(longestPathsDict, newBounds);
+    setCircles(newCircles);
+  }
 
   useEffect(() => {
-    updateAllData();
+    refreshState()
     setChangeView(true);
   }, [coordsList])
 
   useEffect(() => {
-    updateAllData();
+    refreshState();
     setChangeView(false);
   }, [time])
 
-  const updateAllData = () => {
+  const fetchAllData = async () => {
     if (coordsList.length === 0) {
-      setAllData({});
-      return;
+      return {};
     }
 
     let newData = {};
@@ -150,15 +161,13 @@ function App() {
       }
       else {
         const url = CONFIG.backendUrl + "traveltime/" + key;
-        axios.get(encodeURI(url))
-          .then(resp => {
-            newData[key] = resp.data;
-            setAllData(newData);
-          });
+        const response = await axios.get(encodeURI(url));
+        newData[key] = response.data;
+        return newData;
       }
     }
     if (Object.keys(allData).length > coordsList.length)
-      setAllData(newData);
+      return newData;
   }
 
   return (
@@ -178,7 +187,7 @@ function App() {
 
       <div className="absolute top-0 left-0 md:top-3 md:left-3 md:w-96 w-full z-10000">
         <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />
-        {circles.length > 0 && <BoundsCard colours={colours} setBounds={setBounds} bounds={bounds} />}
+        {circles.length > 0 && <BoundsCard colours={colours} setBounds={handleBoundsChange} bounds={bounds} />}
         {circles.length > 0 && <TimeCard time={time} setTime={setTime} />}
         {!backendAwake && <BackendStatusCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />}
       </div>
