@@ -2,15 +2,11 @@ import LocationCard from './components/LocationCard';
 import { Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'
 import axios from 'axios';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import TimeCard from './components/TimeCard';
 import BackendStatusCard from './components/BackendStatusCard';
 import makeCircles from './components/Circles';
-//import TravelTimeMap from './components/Map';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet'
-import { Marker, Popup, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'
-import ChangeView from './components/ChangeView';
 
 import L from 'leaflet';
 import BoundsCard from './components/BoundsCard';
@@ -28,8 +24,6 @@ const CONFIG = require("./config.json");
 const colours = CONFIG.colours;
 
 function App() {
-
-
   // If you move this into a separate file the app gets slower.
   // Only the javascript gods know why.
   const CircleLayer = ({ circles }) =>
@@ -46,7 +40,6 @@ function App() {
   // TODO: Use top N-th percentile bounds instead.
   const [bounds, setBounds] = useState([15, 30, 45, 60]);
   const [changeView, setChangeView] = useState(true);
-  const [longestPaths, setLongestPaths] = useState({});
   const [backendAwake, setBackendOk] = useState(false);
 
   const addCoords = (coord) => {
@@ -63,9 +56,9 @@ function App() {
     setCoordsList(coordsList.filter((_, i) => i !== idx));
   }
 
-  const handleBoundsChange = (newBounds) => {
+  const handleBoundsChange = async (newBounds) => {
     setBounds(newBounds);
-    const circles = makeCircles(longestPaths, newBounds);
+    const circles = makeCircles(allData, newBounds);
     setCircles(circles);
   }
 
@@ -74,30 +67,13 @@ function App() {
     axios.get(encodeURI(CONFIG.backendUrl))
       .then(_ => setBackendOk(true))
       .catch(e => console.log("Health check failed: ", e));
-
   }, [])
-
-  // When new data is loaded, we calculate the longest paths
-  // to everywhere to colour the map in correctly.
-  const determineLongestPath = async (allData) => {
-    let longestPathsDict = {};
-    for (const data of Object.values(allData)) {
-      for (const path of data) {
-        let key = path.destination.id;
-        if (!(key in longestPathsDict) || longestPathsDict[key].minutes < path.minutes) {
-          longestPathsDict[path.destination.id] = path;
-        }
-      }
-    }
-
-    return longestPathsDict;
-  }
 
   // When the longest paths to every station have been calculated,
   // we can determine what the lowest bound should look like (so
   // that there's always a green layer on the map).
   const computeBounds = (longestPaths) => {
-    let shortestTravelTime = Math.min(...Object.values(longestPaths).map(p => p.minutes))
+    let shortestTravelTime = Math.min(...longestPaths.map(p => p.minutes));
     let copy = [...bounds];
     copy[0] = Math.min(shortestTravelTime + CONFIG.minBoundSize, copy[1]);
     return copy
@@ -105,40 +81,23 @@ function App() {
 
   const fetchAllData = async () => {
     if (coordsList.length === 0) {
-      return {};
+      return [];
     }
 
-    let newData = {};
-
-    for (const coords of coordsList) {
-      // declare the data fetching function
-      let key = coords.join(",") + "/" + time;
-      if (key in allData) {
-        newData[key] = allData[key]
-      }
-      else {
-        const url = CONFIG.backendUrl + "traveltime/" + key;
-        var a = performance.now();
-        const response = await axios.get(encodeURI(url));
-        var b = performance.now();
-        newData[key] = response.data;
-        return newData;
-      }
-    }
-    if (Object.keys(allData).length > coordsList.length)
-      return newData;
+    let key = coordsList.map(coords => coords.join(",")).join("_");
+    // declare the data fetching function
+    const url = CONFIG.backendUrl + "traveltime/" + key + "/" + time;
+    const response = await axios.get(encodeURI(url));
+    return response.data;
   }
-
 
   const refreshState = async () => {
     const newData = await fetchAllData();
     // Cache the data.
     setAllData(newData);
-    const longestPathsDict = await determineLongestPath(newData);
-    setLongestPaths(longestPathsDict);
-    const newBounds = computeBounds(longestPathsDict);
+    const newBounds = computeBounds(newData);
     setBounds(newBounds);
-    const newCircles = makeCircles(longestPathsDict, newBounds);
+    const newCircles = makeCircles(newData, newBounds);
     setCircles(newCircles);
   }
 

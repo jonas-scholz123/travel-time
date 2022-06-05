@@ -13,10 +13,7 @@ const TravelTimeMap = ({ changeView, coordsList, CircleLayer }) =>
             url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
         />
         {CircleLayer}
-        {coordsList.map((c, i) =>
-            <Marker position={c} key={i.toString()}>
-            </Marker>
-        )}
+        {coordsList.map((c, i) => <Marker position={c} key={i.toString()} />)}
     </MapContainer>
 
 export default TravelTimeMap;

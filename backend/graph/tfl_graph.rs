@@ -169,6 +169,40 @@ impl<'a> TflGraph {
         result
     }
 
+    pub fn tt_from_locations(
+        &mut self,
+        start_locs: Vec<Location>,
+        start_time: NaiveTime,
+    ) -> Vec<Path> {
+        if start_locs.len() == 1 {
+            return self
+                .tt_from_location(Location(*start_locs.first().unwrap().clone()), start_time);
+        }
+
+        // Keep track of the longest time taken to a station.
+        let mut longest_paths: HashMap<String, Path> = HashMap::new();
+
+        for loc in start_locs {
+            let paths = self.tt_from_location(loc, start_time);
+            for path in paths {
+                let key = path.destination.id.clone();
+
+                match longest_paths.entry(key) {
+                    Occupied(mut ent) => {
+                        if (*ent.get()).minutes < path.minutes {
+                            ent.insert(path);
+                        }
+                    }
+                    Vacant(ent) => {
+                        ent.insert(path);
+                    }
+                }
+            }
+        }
+
+        longest_paths.into_iter().map(|(_, path)| path).collect()
+    }
+
     pub fn tt_from_stop_id(&self, start: String, start_time: NaiveTime) -> Result<Vec<Path>> {
         let start_idx = *self
             .station_id_to_node
@@ -178,7 +212,7 @@ impl<'a> TflGraph {
         Ok(self.tt_from_start_idx(start_idx, start_time))
     }
 
-    pub fn tt_from_start_idx(&self, start_idx: NodeIndex, start_time: NaiveTime) -> Vec<Path> {
+    fn tt_from_start_idx(&self, start_idx: NodeIndex, start_time: NaiveTime) -> Vec<Path> {
         let mut visited = self.graph.visit_map();
         let mut scores = HashMap::new();
         let mut parents: HashMap<NodeIndex, NodeIndex> = HashMap::new();
@@ -229,11 +263,11 @@ impl<'a> TflGraph {
             .map(|(n_idx, score)| Path {
                 minutes: score - start_score,
                 destination: self.graph.node_weight(n_idx).unwrap().clone(),
-                path: TflGraph::get_path(&parents, n_idx)
-                    .iter()
-                    .map(|idx| self.graph.node_weight(*idx).unwrap().id.clone())
-                    .collect(),
-                //path: None,
+                //path: TflGraph::get_path(&parents, n_idx)
+                //    .iter()
+                //    .map(|idx| self.graph.node_weight(*idx).unwrap().id.clone())
+                //    .collect(),
+                path: vec![],
             })
             .collect()
     }

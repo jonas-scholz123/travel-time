@@ -18,7 +18,7 @@ pub struct SetupArgs {
     routes_load: bool,
     /// Should route segments (i.e. between individual stops)
     /// be loaded from the TFL api?
-    #[clap(short, long)]
+    #[clap(long)]
     segment_load: bool,
     /// Should timetables (departure times) be loaded from the TFL api?
     #[clap(short, long)]

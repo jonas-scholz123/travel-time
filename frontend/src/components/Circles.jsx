@@ -9,7 +9,7 @@ const makeCircles = (longestPaths, bounds) => {
   let circles = []
   for (const [idx, bound] of bounds.entries()) {
     circles.push(
-      ...Object.values(longestPaths)
+      ...longestPaths
         .filter(p => p.minutes < bound)
         .map(d => makeCircle(d, bounds[idx], colours[idx])));
   }
