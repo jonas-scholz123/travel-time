@@ -56,18 +56,6 @@ impl<'a> TflGraph {
             stop_ids.insert(&e.destination);
         });
 
-        // There is a bug in the compiler that breaks things
-        // when working with Rocket. Have to use the much slower
-        // version unfortunately.
-
-        //let stop_point_map = stream::iter(stop_ids)
-        //    .map(|id| stop_repo.get_by_id(id))
-        //    .buffer_unordered(30)
-        //    .map(|stop| stop.unwrap().unwrap())
-        //    .map(|stop| (stop.id.clone(), stop))
-        //    .collect::<HashMap<_, _>>()
-        //    .await;
-
         let stop_ids_vec = stop_ids.iter().collect::<Vec<_>>();
         let filter = doc! {"_id": {"$in": stop_ids_vec}};
         let cursor = stop_repo.collection.find(filter, None).await?;
@@ -79,7 +67,6 @@ impl<'a> TflGraph {
             .map(|s| (s.id.clone(), s))
             .collect::<HashMap<_, _>>();
 
-        //while let Some(edge) = cursor.try_next().await? {
         for edge in edges {
             let from_sp = stop_point_map.get(&edge.origin).unwrap();
             let to_sp = stop_point_map.get(&edge.destination).unwrap();
