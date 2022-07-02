@@ -21,26 +21,29 @@ pub async fn get_travel_time(
     time_str: String,
     graph: &State<RwLock<TflGraph>>,
 ) -> Json<Vec<Path>> {
-    let now = Instant::now();
-
     let start_time = NaiveTime::parse_from_str(&time_str, "%H:%M").unwrap();
 
-    if let Some(coords) = Location::try_parse_loc(&loc_string) {
-        return Json(graph.write().await.tt_from_location(coords, start_time));
-    }
+    println!("{}", loc_string);
+    let locs: Result<Vec<_>> = loc_string
+        .split('_')
+        .map(|loc_str| {
+            Location::try_parse_loc(loc_str)
+                .ok_or_else(|| anyhow::anyhow!("Location string could not be parsed: {}", loc_str))
+        })
+        .collect();
 
-    let results = graph
-        .read()
-        .await
-        .tt_from_stop_id(loc_string, start_time)
-        .unwrap();
+    let result = match locs {
+        Ok(coords_list) => graph
+            .write()
+            .await
+            .tt_from_locations(coords_list, start_time),
+        Err(e) => {
+            println!("{}", e);
+            vec![]
+        }
+    };
 
-    println!(
-        "travel time request completed in {}ms",
-        now.elapsed().as_millis()
-    );
-
-    Json(results)
+    Json(result)
 }
 
 pub async fn rocket() -> Result<()> {

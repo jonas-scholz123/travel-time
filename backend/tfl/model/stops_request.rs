@@ -41,13 +41,15 @@ impl StopsByModeRequest {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
+
     use crate::tfl::client::{Client, TFLClient};
 
     use super::*;
 
     #[tokio::test]
     async fn test_request() {
-        let client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
+        let client = TFLClient::new(&env::var("TFL_CLIENT_URI").unwrap()).unwrap();
 
         let mut request =
             StopsByModeRequest::new(vec![TransportMode::Dlr, TransportMode::CableCar]);
