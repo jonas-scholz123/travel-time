@@ -54,7 +54,6 @@ pub async fn rocket() -> Result<()> {
     println!("PORT: {:#?}", port);
 
     let atlas_uri = env::var("MONGO_URI").unwrap();
-    let atlas_uri = "mongodb://localhost:27017";
     let mut atlas_opts = ClientOptions::parse(atlas_uri).await?;
     atlas_opts.app_name = Some("travel-time".to_string());
     let atlas_client = mongodb::Client::with_options(atlas_opts)?;

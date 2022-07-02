@@ -271,15 +271,6 @@ impl<'a> TflGraph {
             })
             .collect()
     }
-
-    fn get_path(parents: &HashMap<NodeIndex, NodeIndex>, child: NodeIndex) -> Vec<NodeIndex> {
-        let mut path = vec![child];
-
-        while let Some(parent) = parents.get(path.last().unwrap()) {
-            path.push(*parent);
-        }
-        path
-    }
 }
 
 #[cfg(test)]

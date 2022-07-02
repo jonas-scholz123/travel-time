@@ -12,7 +12,8 @@ use chrono::NaiveTime;
 use mongodb::options::ClientOptions;
 
 pub async fn load(options: SetupArgs) -> Result<()> {
-    let mut tfl_client = TFLClient::new("7fa56d767da04461a225dfe82d34ef51").unwrap();
+    let tfl_uri = env::var("TFL_CLIENT_URI")?;
+    let mut tfl_client = TFLClient::new(&tfl_uri).unwrap();
     // Parse a connection string into an options struct.
     let mut client_options = ClientOptions::parse("mongodb://localhost:27017").await?;
     client_options.app_name = Some("TravelTime".to_string());
