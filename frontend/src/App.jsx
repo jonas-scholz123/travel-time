@@ -1,12 +1,15 @@
 import LocationCard from './components/LocationCard';
 import { Pane } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css'
+import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import TimeCard from './components/TimeCard';
 import BackendStatusCard from './components/BackendStatusCard';
 import makeCircles from './components/Circles';
-import 'leaflet/dist/leaflet.css'
+import 'leaflet/dist/leaflet.css';
+import { useSearchParams } from 'react-router-dom';
+
+
 
 import L from 'leaflet';
 import BoundsCard from './components/BoundsCard';
@@ -33,28 +36,18 @@ function App() {
       </Pane>
     </div>
 
-  const [coordsList, setCoordsList] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [coordsList, setCoordsList] = useState(searchParams.getAll("coords").map(c => c.split(",")));
+  const [locations, setLocations] = useState(searchParams.getAll("locs"));
   const [circles, setCircles] = useState([]);
   const [allData, setAllData] = useState({});
-  const [time, setTime] = useState("18:00");
+
+  const current = new Date();
+  const [time, setTime] = useState(current.getHours() + ":" + current.getMinutes());
   // TODO: Use top N-th percentile bounds instead.
   const [bounds, setBounds] = useState([15, 30, 45, 60]);
   const [changeView, setChangeView] = useState(true);
   const [backendAwake, setBackendOk] = useState(false);
-
-  const addCoords = (coord) => {
-    setCoordsList([...coordsList, coord]);
-  }
-
-  const changeCoords = (idx, coord) => {
-    let copy = [...coordsList];
-    copy[idx] = coord;
-    setCoordsList(copy);
-  }
-
-  const deleteCoords = (idx) => {
-    setCoordsList(coordsList.filter((_, i) => i !== idx));
-  }
 
   const handleBoundsChange = async (newBounds) => {
     setBounds(newBounds);
@@ -68,6 +61,40 @@ function App() {
       .then(_ => setBackendOk(true))
       .catch(e => console.log("Health check failed: ", e));
   }, [])
+
+  const setArrayParam = (name, array) => {
+    searchParams.delete(name);
+    if (array.length > 0) {
+      for (const el of array) {
+        searchParams.append(name, el);
+      }
+    }
+    setSearchParams(searchParams);
+  }
+
+  useEffect(() => {
+    setArrayParam("coords", coordsList);
+    setArrayParam("locs", locations);
+  }, [coordsList, locations])
+
+  const addLoc = (location, coord) => {
+    setLocations([...locations, location])
+    setCoordsList([...coordsList, coord]);
+  }
+
+  const deleteLoc = (idx) => {
+    setLocations(locations.filter((_, i) => i !== idx))
+    setCoordsList(coordsList.filter((_, i) => i !== idx))
+  }
+
+  const changeLoc = (idx, location, coords) => {
+    let newLocations = [...locations];
+    newLocations[idx] = location;
+    setLocations(newLocations);
+    let newCoords = [...coordsList];
+    newCoords[idx] = coords;
+    setCoordsList(newCoords);
+  }
 
   // When the longest paths to every station have been calculated,
   // we can determine what the lowest bound should look like (so
@@ -111,15 +138,19 @@ function App() {
     setChangeView(false);
   }, [time])
 
-
   return (
     <div className="h-screen">
       <TravelTimeMap changeView={changeView} coordsList={coordsList} CircleLayer={<CircleLayer circles={circles} />} />
       <div className="absolute top-0 left-0 md:top-3 md:left-3 md:w-96 w-full z-10000">
-        <LocationCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />
+        <LocationCard
+          addLoc={addLoc}
+          deleteLoc={deleteLoc}
+          changeLoc={changeLoc}
+          locations={locations}
+        />
         {circles.length > 0 && <BoundsCard colours={colours} setBounds={handleBoundsChange} bounds={bounds} />}
         {circles.length > 0 && <TimeCard time={time} setTime={setTime} />}
-        {!backendAwake && <BackendStatusCard addCoords={addCoords} deleteCoords={deleteCoords} changeCoords={changeCoords} />}
+        {!backendAwake && <BackendStatusCard />}
       </div>
     </div>
   );

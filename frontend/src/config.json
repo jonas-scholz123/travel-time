@@ -1,5 +1,5 @@
 {
-    "backendUrl": "http://localhost:3001/",
+    "backendUrl": "https://still-sierra-43714.herokuapp.com/",
     "walkingSpeed": 80,
     "startingBounds": [
         [
