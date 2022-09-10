@@ -1,6 +1,6 @@
 # London Travel Time :bus:
-You can find this webapp [Here](londontraveltime.herokuapp.com).
-Because I'm using Heroku's free tier it needs a couple of seconds to open if it hasn't been opened in a while, so be patient.
+You can find this webapp [Here](https://tflmap.onrender.com/).
+Because I'm using Render's (very slow) free tier it needs up to 3 minutes to open if it hasn't been opened in a while, so be patient.
 
 The app allows you to input any number of locations in London via postcode, and it colours a map of london by how long it takes to get there via public transport from all locations.
 
