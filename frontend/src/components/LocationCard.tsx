@@ -1,5 +1,5 @@
 import React from "react";
-import AddLocation from "./AddLocation";
+import AddPostcode from "./AddPostcode";
 import EnteredLocation from "./EnteredLocation";
 import { useState } from "react";
 import Location from "./Location";
@@ -35,7 +35,7 @@ function LocationCard(props: {
             />
           );
         })}
-        <AddLocation onClick={onNewLoc} error={newLocError} />
+        <AddPostcode onClick={onNewLoc} error={newLocError} />
       </form>
     </div>
   );

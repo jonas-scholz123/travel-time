@@ -8,13 +8,13 @@ class Location {
   }
 
   static fromString(locationString: string): Location {
-    const [name, latStr, lngStr] = locationString.split(",");
+    const [name, latStr, lngStr] = locationString.split("&");
     const coords: [number, number] = [parseFloat(latStr), parseFloat(lngStr)];
     return new Location(name, coords);
   }
 
   toString(): string {
-    return `${this.name},${this.coords[0]},${this.coords[1]}`;
+    return `${this.name}&${this.coords[0]}&${this.coords[1]}`;
   }
 }
 

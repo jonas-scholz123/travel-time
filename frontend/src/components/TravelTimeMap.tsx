@@ -1,21 +1,22 @@
-import React from "react";
-import { MapContainer, TileLayer } from "react-leaflet";
-import { Marker } from "react-leaflet";
+import React, { useState } from "react";
+import { MapContainer, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import Location from "./Location.ts";
 import config from "../config.ts";
 import MapClickHandler from "./MapClickHandler.tsx";
 import ChangeMapBounds from "./ChangeView.tsx";
+import MarkerClickedPopup from "./MarkerClickedPopup.tsx";
+import { ColouredMarker, MarkerColour } from "./ColouredMarker.tsx";
 
 const TravelTimeMap = ({ addLoc, changeView, locations, CircleLayer }) => {
-  const handleMapClick = (e) => {
-    const { lat, lng } = e.latlng;
-    const latLongString = `${lat},${lng}`;
-    const loc = new Location(latLongString, [lat, lng]);
-    addLoc(loc);
-  };
+  const [clickedLoc, setClickedLoc] = useState<Location | null>(null);
 
-  console.log("locations", locations);
+  const handleMapClick = (e) => {
+    var { lat, lng } = e.latlng;
+    const latLongString = `(${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    const loc = new Location(latLongString, [lat, lng]);
+    setClickedLoc(loc);
+  };
 
   return (
     <MapContainer
@@ -31,8 +32,24 @@ const TravelTimeMap = ({ addLoc, changeView, locations, CircleLayer }) => {
       />
       {CircleLayer}
       {locations.map((l, i) => (
-        <Marker position={l.coords} key={i.toString()} />
+        <ColouredMarker
+          position={l.coords}
+          key={i.toString()}
+          colour={MarkerColour.blue}
+        />
       ))}
+
+      {clickedLoc && (
+        <ColouredMarker position={clickedLoc.coords} colour={MarkerColour.grey}>
+          <Popup closeButton={false}>
+            <MarkerClickedPopup
+              location={clickedLoc}
+              onClick={() => addLoc(clickedLoc)}
+              className="!bg-green-500"
+            />
+          </Popup>
+        </ColouredMarker>
+      )}
       {<MapClickHandler onClick={handleMapClick} />}
     </MapContainer>
   );

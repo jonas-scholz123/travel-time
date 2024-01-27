@@ -4,7 +4,7 @@ import { SetStateAction, useEffect, useState } from "react";
 import axios from "axios";
 import Location from "./Location";
 
-function AddLocation(props: {
+function AddPostcode(props: {
   error: string;
   onClick: (arg0: Location) => void;
 }) {
@@ -88,4 +88,4 @@ function AddLocation(props: {
   );
 }
 
-export default AddLocation;
+export default AddPostcode;

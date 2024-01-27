@@ -10,7 +10,8 @@ interface Config {
 }
 
 const config: Config = {
-  backendUrl: "http://localhost:3001/",
+  //backendUrl: "http://localhost:3001/",
+  backendUrl: "https://londontraveltime.onrender.com/",
   walkingSpeed: 80,
   startingBounds: [
     [51.564956, -0.263222],

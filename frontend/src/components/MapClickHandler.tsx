@@ -2,7 +2,7 @@ import { useMapEvents } from "react-leaflet";
 
 const MapClickHandler = ({ onClick }) => {
   useMapEvents({
-    click: (e: React.ChangeEvent<HTMLInputElement>) => {
+    click: (e) => {
       onClick(e);
     },
   });

@@ -61,7 +61,32 @@ function App() {
   // TODO: Use top N-th percentile bounds instead.
   const [bounds, setBounds] = useState([15, 30, 45, 60]);
   const [changeView, setChangeView] = useState(true);
-  const [backendAwake, setBackendOk] = useState(false);
+  const [backendAwake, setBackendAwake] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!backendAwake) {
+      return;
+    }
+    refreshState();
+    setChangeView(true);
+  }, [locations, backendAwake]);
+
+  useEffect(() => {
+    if (!backendAwake) {
+      return;
+    }
+    refreshState();
+    setChangeView(false);
+  }, [time, backendAwake]);
+
+  useEffect(() => {
+    console.log("Health check started, backendAwake: ", backendAwake);
+    repeatHealthCheckUntilAwake(backendAwake);
+  }, [backendAwake]);
+
+  useEffect(() => {
+    setArrayParam(LOCATIONS_SEARCH_PARAM, locations);
+  }, [locations]);
 
   const handleBoundsChange = async (newBounds: number[]) => {
     setBounds(newBounds);
@@ -69,13 +94,22 @@ function App() {
     setCircles(circles);
   };
 
-  useEffect(() => {
-    console.log("Waking up the backend...");
-    axios
-      .get(encodeURI(config.backendUrl))
-      .then((_) => setBackendOk(true))
-      .catch((e) => console.log("Health check failed: ", e));
-  }, []);
+  const isBackendAwake = async () => {
+    try {
+      await axios.get(encodeURI(config.backendUrl));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const repeatHealthCheckUntilAwake = async (backendAwake: boolean) => {
+    const awake = await isBackendAwake();
+    setBackendAwake(awake);
+    if (!awake) {
+      setTimeout(() => repeatHealthCheckUntilAwake(awake), 5000);
+    }
+  };
 
   const setArrayParam = (name: string, array: any[]) => {
     searchParams.delete(name);
@@ -86,10 +120,6 @@ function App() {
     }
     setSearchParams(searchParams);
   };
-
-  useEffect(() => {
-    setArrayParam(LOCATIONS_SEARCH_PARAM, locations);
-  }, [locations]);
 
   const addLoc = (location: Location) => {
     setLocations([...locations, location]);
@@ -120,16 +150,6 @@ function App() {
     const newCircles = makeCircles(journeys, newBounds);
     setCircles(newCircles);
   };
-
-  useEffect(() => {
-    refreshState();
-    setChangeView(true);
-  }, [locations]);
-
-  useEffect(() => {
-    refreshState();
-    setChangeView(false);
-  }, [time]);
 
   return (
     <div className="h-screen">

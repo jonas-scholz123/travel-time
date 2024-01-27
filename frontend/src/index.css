@@ -11,3 +11,15 @@
   position: absolute;
   right: 56px
 }
+
+.leaflet-popup-content{
+  width: fit-content !important;
+  margin: 0 0 !important;
+  white-space: nowrap !important;
+  display: flex;
+  justify-content: center;
+}
+
+.leaflet-popup-content-wrapper{
+  border-radius: 9px !important;
+}
