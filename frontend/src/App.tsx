@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import TimeCard from "./components/TimeCard.tsx";
-import BackendStatusCard from "./components/LoadingBackendCard.tsx";
+import BackendStatusCard from "./components/BackendStatusCard.tsx";
 import makeCircles from "./components/Circles.tsx";
 import "leaflet/dist/leaflet.css";
 import { useSearchParams } from "react-router-dom";
@@ -17,6 +17,8 @@ import TravelTimeMap from "./components/TravelTimeMap.tsx";
 import Location from "./components/Location";
 import { Journey } from "./api/types.ts";
 import { queryJourneys } from "./api/journeyApi.ts";
+import { BigScreenCards } from "./components/BigScreenCards.tsx";
+import { SmallScreenCards } from "./components/SmallScreenCards.tsx";
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -62,6 +64,7 @@ function App() {
   const [bounds, setBounds] = useState([15, 30, 45, 60]);
   const [changeView, setChangeView] = useState(true);
   const [backendAwake, setBackendAwake] = useState<boolean>(false);
+  const [isSmallScreen, setIsSmallScreen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!backendAwake) {
@@ -87,6 +90,18 @@ function App() {
   useEffect(() => {
     setArrayParam(LOCATIONS_SEARCH_PARAM, locations);
   }, [locations]);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const smallScreenThreshold = 420;
+      setIsSmallScreen(window.innerWidth < smallScreenThreshold);
+    };
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => {
+      window.removeEventListener("resize", checkScreenSize);
+    };
+  }, []);
 
   const handleBoundsChange = async (newBounds: number[]) => {
     setBounds(newBounds);
@@ -151,6 +166,21 @@ function App() {
     setCircles(newCircles);
   };
 
+  const cardProps = {
+    locations,
+    circles,
+    colours,
+    bounds,
+    time,
+    backendAwake,
+    addLoc,
+    deleteLoc,
+    handleBoundsChange,
+    setTime,
+  };
+
+  const cardComponent = isSmallScreen ? SmallScreenCards : BigScreenCards;
+
   return (
     <div className="h-screen">
       <TravelTimeMap
@@ -159,22 +189,12 @@ function App() {
         locations={locations}
         CircleLayer={<CircleLayer circles={circles} />}
       />
-      <div className="absolute top-0 left-0 md:top-3 md:left-3 md:w-96 w-full z-10000">
-        <LocationCard
-          addLoc={addLoc}
-          deleteLoc={deleteLoc}
-          locations={locations}
-        />
-        {circles.length > 0 && (
-          <BoundsCard
-            colours={colours}
-            setBounds={handleBoundsChange}
-            bounds={bounds}
-          />
-        )}
-        {circles.length > 0 && <TimeCard time={time} setTime={setTime} />}
-        {!backendAwake && <BackendStatusCard />}
-      </div>
+
+      {isSmallScreen ? (
+        <SmallScreenCards {...cardProps} />
+      ) : (
+        <BigScreenCards {...cardProps} />
+      )}
     </div>
   );
 }
