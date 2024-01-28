@@ -13,3 +13,4 @@ data/
 cache/
 flamegraph.svg
 */.DS_Store
+.zed

@@ -9,8 +9,8 @@ export const GreenPlusButton = (props) => {
             hover:cursor-pointer border-gray-200 h-full p-2 rounded-r-lg border-l`;
 
   return (
-    <div className={className}>
-      <button className="text-lg" onClick={onClick}>
+    <div className={className} onClick={onClick}>
+      <button className="text-lg">
         <FaPlus />
       </button>
     </div>

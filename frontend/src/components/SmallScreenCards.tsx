@@ -1,5 +1,4 @@
 import React from "react";
-import Draggable from "react-draggable";
 import LocationCard from "./LocationCard";
 import BoundsCard from "./BoundsCard";
 import TimeCard from "./TimeCard";
@@ -13,7 +12,7 @@ export const SmallScreenCards = (props) => {
   return (
     <div>
       {showCards && (
-        <div className="absolute top-0 left-0 p-3 w-full z-10000">
+        <div className="z-10000 absolute left-0 top-0 w-full p-3">
           <LocationCard
             addLoc={props.addLoc}
             deleteLoc={props.deleteLoc}
@@ -32,7 +31,7 @@ export const SmallScreenCards = (props) => {
           {!props.backendAwake && <BackendStatusCard />}
         </div>
       )}
-      <div className="absolute bottom-0 right-0 p-3 z-10000">
+      <div className="z-10000 absolute bottom-0 right-0 p-3">
         <FaButton
           faIcon={showCards ? <FaEyeSlash /> : <FaBars />}
           onClick={() => setShowCards(!showCards)}

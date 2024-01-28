@@ -9,14 +9,14 @@ const colours = CONFIG.colours;
 // we need to re-render the circles.
 const makeCircles = (
   journeys: Journey[],
-  bounds: number[]
+  bounds: number[],
 ): React.ReactElement[] => {
   let circles = [];
   for (const [idx, bound] of bounds.entries()) {
     circles.push(
       ...journeys
         .filter((p) => p.minutes < bound)
-        .map((journey) => makeCircle(journey, bounds[idx], colours[idx]))
+        .map((journey) => makeCircle(journey, bounds[idx], colours[idx])),
     );
   }
 
@@ -27,7 +27,7 @@ const makeCircles = (
 const makeCircle = (
   journey: Journey,
   boundMins: number,
-  colour: string
+  colour: string,
 ): React.ReactElement => {
   const minutes = journey.minutes;
   const walkingMinutes = boundMins - minutes;

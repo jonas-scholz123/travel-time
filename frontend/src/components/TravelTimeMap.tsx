@@ -8,7 +8,13 @@ import ChangeMapBounds from "./ChangeView.tsx";
 import MarkerClickedPopup from "./MarkerClickedPopup.tsx";
 import { ColouredMarker, MarkerColour } from "./ColouredMarker.tsx";
 
-const TravelTimeMap = ({ addLoc, changeView, locations, CircleLayer }) => {
+const TravelTimeMap = ({
+  addLoc,
+  changeView,
+  setChangeView,
+  locations,
+  CircleLayer,
+}) => {
   const [clickedLoc, setClickedLoc] = useState<Location | null>(null);
 
   const popupRef = useRef(null);
@@ -35,7 +41,13 @@ const TravelTimeMap = ({ addLoc, changeView, locations, CircleLayer }) => {
       zoomControl={false}
       preferCanvas={true}
     >
-      {<ChangeMapBounds locations={locations} changeView={changeView} />}
+      {
+        <ChangeMapBounds
+          locations={locations}
+          changeView={changeView}
+          setChangeView={setChangeView}
+        />
+      }
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
@@ -58,7 +70,9 @@ const TravelTimeMap = ({ addLoc, changeView, locations, CircleLayer }) => {
           <Popup closeOnClick={true} closeButton={false} ref={popupRef}>
             <MarkerClickedPopup
               location={clickedLoc}
-              addLoc={() => addLoc(clickedLoc)}
+              addLoc={() => {
+                addLoc(clickedLoc);
+              }}
               onPopupClick={handleMarkerClick}
               className="!bg-green-500"
             />

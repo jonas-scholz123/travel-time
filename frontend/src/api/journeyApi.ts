@@ -6,7 +6,8 @@ import CONFIG from "../config.ts";
 
 export const queryJourneys = async (
   locations: Location[],
-  time: string
+  time: string,
+  signal: AbortSignal,
 ): Promise<Journey[]> => {
   if (locations.length === 0) {
     return [];
@@ -15,7 +16,7 @@ export const queryJourneys = async (
   let key = toKey(locations);
 
   const url = CONFIG.backendUrl + "traveltime/" + key + "/" + time;
-  const response = await axios.get(encodeURI(url));
+  const response = await axios.get(encodeURI(url), { signal: signal });
   const journeys: Journey[] = response.data;
   return journeys;
 };

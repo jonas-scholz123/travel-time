@@ -7,6 +7,7 @@ import { ReactElement } from "react";
 const ChangeMapBounds = (props: {
   locations: Location[];
   changeView: boolean;
+  setChangeView: (changeView: boolean) => void;
 }): ReactElement => {
   const map = useMap();
 
@@ -14,20 +15,20 @@ const ChangeMapBounds = (props: {
     return;
   }
 
+  // We only want to change the view once.
+  props.setChangeView(false);
+
   const coords = props.locations.map((l) => l.coords);
 
-  if (coords.length == 0) {
+  if (coords.length === 0) {
     map.fitBounds(config.startingBounds);
     return;
   }
 
-  if (coords.length == 1) {
+  if (coords.length === 1) {
     map.setView(coords[0], 14);
     return;
   }
-
-  map.fitBounds(coords, { padding: [config.padding, config.padding] });
-  return;
 };
 
 export default ChangeMapBounds;
