@@ -9,9 +9,12 @@ interface Config {
   colours: string[];
 }
 
+const backendUrl = process.env.REACT_APP_DEV
+  ? "http://localhost:3001/"
+  : "https://londontraveltime.onrender.com/";
+
 const config: Config = {
-  backendUrl: "http://localhost:3001/",
-  //backendUrl: "https://londontraveltime.onrender.com/",
+  backendUrl: backendUrl,
   walkingSpeed: 80,
   startingBounds: [
     [51.564956, -0.263222],

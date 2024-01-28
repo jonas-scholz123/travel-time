@@ -28,7 +28,7 @@ function BoundsCard(props: {
 
   const handleChange = (event: any, newVals: any[]) => {
     for (const [i, newVal] of newVals.entries()) {
-      if (vals[i] != newVal) {
+      if (vals[i] !== newVal) {
         // i is the index of the value that has changed.
         if (i > 0) {
           newVals[i] = Math.max(newVals[i - 1] + config.minBoundSize, newVal);
@@ -56,9 +56,9 @@ function BoundsCard(props: {
   }
 
   return (
-    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow my-2">
-      <form className="w-full bg-white rounded">
-        <h1 className="text-gray-600 font-semibold pb-2"> Bounds: </h1>
+    <div className="my-2 rounded-lg border border-gray-200 bg-white p-3 shadow">
+      <form className="w-full rounded bg-white">
+        <h1 className="pb-2 font-semibold text-gray-600"> Bounds: </h1>
         <Slider
           components={{ Thumb: ThumbComponent }}
           value={vals}

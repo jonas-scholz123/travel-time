@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import { StrictMode } from "react";
 import App from "./App.tsx";
 import { Route, Routes, BrowserRouter } from "react-router-dom";
 
@@ -12,5 +11,5 @@ root.render(
     <Routes>
       <Route path="/" element={<App />} />
     </Routes>
-  </BrowserRouter>
+  </BrowserRouter>,
 );
