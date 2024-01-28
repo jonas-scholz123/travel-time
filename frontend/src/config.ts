@@ -11,7 +11,7 @@ interface Config {
 
 const backendUrl = process.env.REACT_APP_DEV
   ? "http://localhost:3001/"
-  : "https://londontraveltime.onrender.com/";
+  : "https://tfl-travel-time-backend-polished-log-1447.fly.dev/";
 
 const config: Config = {
   backendUrl: backendUrl,

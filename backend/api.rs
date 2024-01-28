@@ -63,7 +63,9 @@ pub async fn rocket() -> Result<()> {
     let graph = RwLock::new(TflGraph::new(atlas_client).await?);
     println!("Done building graph in {}ms", now.elapsed().as_millis());
 
-    let config = rocket::Config::figment().merge(("port", port));
+    let config = rocket::Config::figment()
+        .merge(("port", port))
+        .merge(("address", "0.0.0.0"));
 
     let _rocket = rocket::custom(config)
         .mount("/", routes![wake_up, get_travel_time])
