@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{tfl::endpoint::Endpoint, utils};
+use crate::{tfl::endpoint::Endpoint, util::string_util};
 
 use super::stops_response::{StopsResponse, TransportMode};
 
@@ -21,7 +21,7 @@ impl Endpoint for StopsByModeRequest {
             "StopPoint/Mode/{}/",
             self.modes
                 .iter()
-                .map(|m| utils::enum_to_string(m).unwrap())
+                .map(|m| string_util::enum_to_string(m).unwrap())
                 .collect::<Vec<String>>()
                 .join(",")
         )

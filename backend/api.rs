@@ -1,9 +1,9 @@
 use std::{env, time::Instant};
 
+use crate::graph::mongo_graph_builder::MongoGraphBuilder;
 use crate::graph::{location::Location, path::Path, tfl_graph::TflGraph};
 use anyhow::Result;
 use chrono::NaiveTime;
-use mongodb::options::ClientOptions;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
 use rocket::{get, routes, serde::json::Json, State};
@@ -36,7 +36,7 @@ pub async fn get_travel_time(
         Ok(coords_list) => graph
             .write()
             .await
-            .tt_from_locations(coords_list, start_time),
+            .travel_times_from_locs(coords_list, start_time),
         Err(e) => {
             println!("{}", e);
             vec![]
@@ -53,14 +53,11 @@ pub async fn rocket() -> Result<()> {
 
     println!("PORT: {:#?}", port);
 
-    let atlas_uri = env::var("MONGO_URI").unwrap();
-    let mut atlas_opts = ClientOptions::parse(atlas_uri).await?;
-    atlas_opts.app_name = Some("travel-time".to_string());
-    let atlas_client = mongodb::Client::with_options(atlas_opts)?;
+    let graph_builder = MongoGraphBuilder::from_env_var().await?;
 
     println!("Building graph");
     let now = Instant::now();
-    let graph = RwLock::new(TflGraph::new(atlas_client).await?);
+    let graph = RwLock::new(graph_builder.build_graph().await?);
     println!("Done building graph in {}ms", now.elapsed().as_millis());
 
     let config = rocket::Config::figment()

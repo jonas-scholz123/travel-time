@@ -5,7 +5,7 @@ mod graph;
 mod national_rail;
 mod setup;
 mod tfl;
-mod utils;
+mod util;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

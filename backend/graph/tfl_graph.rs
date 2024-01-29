@@ -1,26 +1,20 @@
 use std::{
     collections::hash_map::Entry::{Occupied, Vacant},
-    collections::{BinaryHeap, HashMap, HashSet},
+    collections::{BinaryHeap, HashMap},
 };
 
-use crate::{
-    db::mongo_repo::MongoRepository,
-    tfl::model::{direct_connection::DirectConnection, stops_response::StopPoint},
-};
+use crate::tfl::model::{direct_connection::DirectConnection, stops_response::StopPoint};
+use crate::util::min_scored::MinScored;
 use anyhow::{Context, Result};
 use ball_tree::BallTree;
 use chrono::NaiveTime;
-use futures::TryStreamExt;
-use mongodb::{bson::doc, Client};
 use petgraph::{
     graph::{EdgeReference, NodeIndex},
     visit::{EdgeRef, IntoNodeReferences, VisitMap, Visitable},
     Graph,
 };
 
-use super::{
-    connection::Connection, location::Location, min_scored::MinScored, path::Path, station::Station,
-};
+use super::{connection::Connection, location::Location, path::Path, station::Station};
 
 #[derive(Default)]
 pub struct TflGraph {
@@ -30,38 +24,11 @@ pub struct TflGraph {
 }
 
 impl<'a> TflGraph {
-    pub async fn new(mongo_client: Client) -> Result<TflGraph> {
-        let mut result = Self::default();
-        result
-            .add_stations(
-                &MongoRepository::new(&mongo_client),
-                &MongoRepository::new(&mongo_client),
-            )
-            .await?;
-        result.add_walking_edges();
-        Ok(result)
-    }
-
-    async fn add_stations(
+    pub fn add_stations(
         &mut self,
-        connection_repo: &MongoRepository<DirectConnection>,
-        stop_repo: &MongoRepository<StopPoint>,
+        edges: Vec<DirectConnection>,
+        stop_points: Vec<StopPoint>,
     ) -> Result<()> {
-        let cursor = connection_repo.get_all().await?;
-        let edges = cursor.try_collect::<Vec<_>>().await?;
-
-        let mut stop_ids = HashSet::new();
-        edges.iter().for_each(|e| {
-            stop_ids.insert(&e.origin);
-            stop_ids.insert(&e.destination);
-        });
-
-        let stop_ids_vec = stop_ids.iter().collect::<Vec<_>>();
-        let filter = doc! {"_id": {"$in": stop_ids_vec}};
-        let cursor = stop_repo.collection.find(filter, None).await?;
-
-        let stop_points = cursor.try_collect::<Vec<_>>().await?;
-
         let stop_point_map = stop_points
             .iter()
             .map(|s| (s.id.clone(), s))
@@ -147,7 +114,11 @@ impl<'a> TflGraph {
         }
     }
 
-    pub fn tt_from_location(&mut self, start_loc: Location, start_time: NaiveTime) -> Vec<Path> {
+    pub fn travel_times_from_loc(
+        &mut self,
+        start_loc: Location,
+        start_time: NaiveTime,
+    ) -> Vec<Path> {
         let start = Station {
             id: "".into(),
             location: start_loc,
@@ -169,21 +140,21 @@ impl<'a> TflGraph {
         result
     }
 
-    pub fn tt_from_locations(
+    pub fn travel_times_from_locs(
         &mut self,
         start_locs: Vec<Location>,
         start_time: NaiveTime,
     ) -> Vec<Path> {
         if start_locs.len() == 1 {
             return self
-                .tt_from_location(Location(*start_locs.first().unwrap().clone()), start_time);
+                .travel_times_from_loc(Location(*start_locs.first().unwrap().clone()), start_time);
         }
 
         // Keep track of the longest time taken to a station.
         let mut longest_paths: HashMap<String, Path> = HashMap::new();
 
         for loc in start_locs {
-            let paths = self.tt_from_location(loc, start_time);
+            let paths = self.travel_times_from_loc(loc, start_time);
             for path in paths {
                 let key = path.destination.id.clone();
 
@@ -263,13 +234,21 @@ impl<'a> TflGraph {
             .map(|(n_idx, score)| Path {
                 minutes: score - start_score,
                 destination: self.graph.node_weight(n_idx).unwrap().clone(),
-                //path: TflGraph::get_path(&parents, n_idx)
-                //    .iter()
-                //    .map(|idx| self.graph.node_weight(*idx).unwrap().id.clone())
-                //    .collect(),
-                path: vec![],
+                path: TflGraph::get_path(&parents, n_idx)
+                    .iter()
+                    .map(|idx| self.graph.node_weight(*idx).unwrap().id.clone())
+                    .collect(),
             })
             .collect()
+    }
+
+    fn get_path(parents: &HashMap<NodeIndex, NodeIndex>, child: NodeIndex) -> Vec<NodeIndex> {
+        let mut path = vec![child];
+
+        while let Some(parent) = parents.get(path.last().unwrap()) {
+            path.push(*parent);
+        }
+        path
     }
 }
 
@@ -277,6 +256,8 @@ impl<'a> TflGraph {
 mod tests {
     use geo::Point;
     use mongodb::options::ClientOptions;
+
+    use crate::graph::mongo_graph_builder::MongoGraphBuilder;
 
     use super::*;
 
@@ -287,11 +268,12 @@ mod tests {
             .unwrap();
         atlas_opts.app_name = Some("travel-time".to_string());
         let atlas_client = mongodb::Client::with_options(atlas_opts).unwrap();
-        let mut graph = TflGraph::new(atlas_client).await.unwrap();
+        let graph_builder = MongoGraphBuilder::from_client(atlas_client).await;
+        let mut graph = graph_builder.build_graph().await.unwrap();
 
         let loc = Location(Point::new(51.501105, -0.232320));
         let time = NaiveTime::from_hms(10, 0, 0);
-        let results = graph.tt_from_location(loc, time);
+        let results = graph.travel_times_from_loc(loc, time);
         assert!(!results.is_empty());
     }
 }

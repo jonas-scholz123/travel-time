@@ -2,7 +2,7 @@ use std::{env, time::Instant};
 
 use crate::{
     db::{atlas_loader::copy_collections, data_fixer::DataFixer, tfl_loader::Loader},
-    graph::tfl_graph::TflGraph,
+    graph::mongo_graph_builder::MongoGraphBuilder,
     national_rail::{s3::NationalRailS3, timetable_loader::TimetableLoader},
     tfl::client::TFLClient,
     SetupArgs,
@@ -87,7 +87,8 @@ pub async fn load(options: SetupArgs) -> Result<()> {
     if options.build_graph {
         println!("Building graph");
         let now = Instant::now();
-        let graph = TflGraph::new(mongo_client).await?;
+        let graph_builder = MongoGraphBuilder::from_client(mongo_client).await;
+        let graph = graph_builder.build_graph().await?;
         println!("Done building graph in {}ms", now.elapsed().as_millis());
 
         println!("Computing dijkstra's algorithm.");

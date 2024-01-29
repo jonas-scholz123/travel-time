@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{tfl::endpoint::Endpoint, utils};
+use crate::{tfl::endpoint::Endpoint, util::string_util};
 
 use super::{line_response::LinesResult, stops_response::TransportMode};
 
@@ -20,7 +20,7 @@ impl Endpoint for LinesByModeRequest {
             "Line/Mode/{}/Route",
             self.modes
                 .iter()
-                .map(|m| utils::enum_to_string(m).unwrap())
+                .map(|m| string_util::enum_to_string(m).unwrap())
                 .collect::<Vec<String>>()
                 .join(",")
         )
